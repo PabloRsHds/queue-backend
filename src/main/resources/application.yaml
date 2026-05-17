@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: queue
+  datasource:
+    username: root
+    url: jdbc:postgresql://localhost:5432/queue
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: 'true'
+server:
+  error:
+    include-message: never
+    include-stacktrace: never
+
+
+public:
+  key: classpath:public-key

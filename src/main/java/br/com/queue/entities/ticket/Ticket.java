@@ -1,0 +1,66 @@
+package br.com.queue.entities.ticket;
+
+import br.com.queue.entities.user.User;
+import br.com.queue.entities.attendance.Attendance;
+import br.com.queue.entities.customer.Customer;
+import br.com.queue.entities.schedule.Schedule;
+import br.com.queue.entities.serviceManagement.ServiceManagement;
+import br.com.queue.enums.PriorityLevel;
+import br.com.queue.enums.TicketStatus;
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Data
+@Table(name = "tb_tickets")
+public class Ticket {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "ticket_id")
+    private String ticketId;
+
+    @Column(nullable = false, unique = true)
+    private String code;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TicketStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PriorityLevel priority;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", nullable = false)
+    private Customer customer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_management_id", nullable = false)
+    private ServiceManagement serviceManagement;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "attendant_id")
+    private User attendant;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "schedule_id")
+    private Schedule schedule;
+
+    @OneToOne(mappedBy = "ticket", fetch = FetchType.LAZY)
+    private Attendance attendance;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "called_at")
+    private LocalDateTime calledAt;
+
+    @Column(name = "started_at")
+    private LocalDateTime startedAt;
+
+    @Column(name = "finished_at")
+    private LocalDateTime finishedAt;
+}

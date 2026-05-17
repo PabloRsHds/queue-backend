@@ -1,0 +1,53 @@
+package br.com.queue.entities.user;
+
+import br.com.queue.entities.serviceManagement.ServiceManagement;
+import br.com.queue.enums.Role;
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.util.HashSet;
+import java.util.Set;
+
+@Entity
+@Data
+@Table(name = "tb_users")
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "user_id")
+    private String userId;
+
+    @Column(nullable = false, unique = true)
+    private String username;
+
+    @Column(nullable = false, unique = true)
+    private String name;
+
+    @Column(nullable = false)
+    private String surname;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column(nullable = false)
+    private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
+
+    @Column(nullable = false)
+    private Boolean active = true;
+
+    @Column(name = "counter_number")
+    private Integer counterNumber;
+
+    @ManyToMany
+    @JoinTable(
+            name = "tb_user_services",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "service_management_id")
+    )
+    private Set<ServiceManagement> services = new HashSet<>();
+}

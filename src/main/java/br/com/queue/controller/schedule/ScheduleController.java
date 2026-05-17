@@ -1,0 +1,59 @@
+package br.com.queue.controller.schedule;
+
+import br.com.queue.dto.schedule.allSchedules.ResponseAllSchedulesDto;
+import br.com.queue.dto.schedule.create.CreateScheduleDto;
+import br.com.queue.dto.schedule.create.ResponseScheduleDto;
+import br.com.queue.dto.schedule.update.ResponseUpdateScheduleDto;
+import br.com.queue.dto.schedule.update.UpdateScheduleDto;
+import br.com.queue.service.schedule.ScheduleService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/schedule")
+@RequiredArgsConstructor
+public class ScheduleController {
+
+    private final ScheduleService scheduleService;
+
+    @PostMapping
+    public ResponseEntity<ResponseScheduleDto> createSchedule(@RequestBody CreateScheduleDto dto) {
+
+        var response = this.scheduleService.createSchedule(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PatchMapping("/status")
+    public ResponseEntity<ResponseUpdateScheduleDto> updateSchedule(@RequestBody UpdateScheduleDto dto) {
+
+        var response = this.scheduleService.updateSchedule(dto);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<ResponseAllSchedulesDto>> getAllSchedules(
+            @RequestParam int page,
+            @RequestParam int size
+    ) {
+
+        var response = this.scheduleService.getAllSchedules(page, size);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{scheduleId}")
+    public ResponseEntity<ResponseScheduleDto> getScheduleById(@PathVariable String scheduleId) {
+
+        var response = this.scheduleService.getScheduleById(scheduleId);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{scheduleId}")
+    public ResponseEntity<Void> deleteSchedule(@PathVariable String scheduleId) {
+
+        this.scheduleService.deleteSchedule(scheduleId);
+        return ResponseEntity.noContent().build();
+    }
+}

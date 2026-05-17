@@ -1,0 +1,65 @@
+package br.com.queue.controller.user;
+
+import br.com.queue.dto.user.allUsers.ResponseAllUsersDto;
+import br.com.queue.dto.user.create.CreateUserDto;
+import br.com.queue.dto.user.create.ResponseUserDto;
+import br.com.queue.dto.user.update.ResponseUpdateUserDto;
+import br.com.queue.dto.user.update.UpdateUserDto;
+import br.com.queue.service.user.UserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/users")
+@RequiredArgsConstructor
+public class UserController {
+
+    private final UserService userService;
+
+    @PostMapping
+    public ResponseEntity<ResponseUserDto> createUser(
+            @RequestBody CreateUserDto dto
+    ) {
+
+        var response = this.userService.createUser(dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PutMapping
+    public ResponseEntity<ResponseUpdateUserDto> update(
+            @RequestBody UpdateUserDto dto
+    ) {
+
+        var response = this.userService.updateUser(dto);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<ResponseAllUsersDto>> getAllUsers(
+            @RequestParam int page,
+            @RequestParam int size
+    ) {
+
+        var response = this.userService.getAllUsers(page, size);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<ResponseUserDto> getUserById(
+            @PathVariable String userId
+    ) {
+
+        var response = this.userService.getUserById(userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<Void> delete(@PathVariable String userId) {
+
+        this.userService.deleteUser(userId);
+        return ResponseEntity.noContent().build();
+    }
+}
