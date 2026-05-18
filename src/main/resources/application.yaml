@@ -1,18 +1,14 @@
 spring:
-  application:
-    name: queue
   datasource:
-    username: root
+    username: postgres
     url: jdbc:postgresql://localhost:5432/queue
-    password: root
+    password: 8712
   jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
-    show-sql: 'true'
-server:
-  error:
-    include-message: never
-    include-stacktrace: never
 
 
 public:

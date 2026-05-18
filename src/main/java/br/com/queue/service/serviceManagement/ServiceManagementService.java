@@ -5,6 +5,7 @@ import br.com.queue.dto.serviceManagement.create.CreateServiceManagementDto;
 import br.com.queue.dto.serviceManagement.create.ResponseServiceManagementDto;
 import br.com.queue.dto.serviceManagement.update.ResponseUpdateServiceManagementDto;
 import br.com.queue.dto.serviceManagement.update.UpdateServiceManagementDto;
+import br.com.queue.entities.department.Department;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.repositories.department.DepartmentRepository;
 import br.com.queue.repositories.serviceManagement.ServiceManagementRepository;
@@ -76,16 +77,25 @@ public class ServiceManagementService {
         );
     }
 
-    public Page<ResponseAllServicesManagementDto> getAllServicesManagement(int page, int size) {
+    public Page<ResponseAllServicesManagementDto> getAllServicesManagement(
+            int page,
+            int size,
+            String search) {
 
-        return this.serviceRepository.findAll(PageRequest.of(page, size))
-                .map(service -> new ResponseAllServicesManagementDto(
-                        service.getServiceManagementId(),
-                        service.getName(),
-                        service.getCode(),
-                        service.getDepartment().getName(),
-                        service.getActive()
-                ));
+        String normalizedSearch = (search == null || search.isBlank())
+                ? null
+                : search.trim();
+
+        Page<ServiceManagement> serviceManagements = this.serviceRepository
+                .findAllWithSearch(normalizedSearch, PageRequest.of(page, size));
+
+        return serviceManagements.map(service -> new ResponseAllServicesManagementDto(
+                service.getServiceManagementId(),
+                service.getName(),
+                service.getCode(),
+                service.getDepartment().getName(),
+                service.getActive()
+        ));
     }
 
     public ResponseServiceManagementDto getServiceManagementById(String serviceManagementId) {

@@ -28,7 +28,7 @@ public class ServiceManagementController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PutMapping
+    @PatchMapping
     public ResponseEntity<ResponseUpdateServiceManagementDto> updateServiceManagement(
             @RequestBody UpdateServiceManagementDto dto
     ) {
@@ -40,11 +40,11 @@ public class ServiceManagementController {
     @GetMapping
     public ResponseEntity<Page<ResponseAllServicesManagementDto>> getAllServicesManagement(
             @RequestParam int page,
-            @RequestParam int size
+            @RequestParam int size,
+            @RequestParam(required = false) String search
     ) {
 
-        var response = this.serviceManagementService.getAllServicesManagement(page, size);
-
+        var response = this.serviceManagementService.getAllServicesManagement(page, size, search);
         return ResponseEntity.ok(response);
     }
 
