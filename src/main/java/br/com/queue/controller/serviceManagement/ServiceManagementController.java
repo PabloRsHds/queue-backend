@@ -1,9 +1,7 @@
 package br.com.queue.controller.serviceManagement;
 
-import br.com.queue.dto.serviceManagement.allServicesManagement.ResponseAllServicesManagementDto;
 import br.com.queue.dto.serviceManagement.create.CreateServiceManagementDto;
-import br.com.queue.dto.serviceManagement.create.ResponseServiceManagementDto;
-import br.com.queue.dto.serviceManagement.update.ResponseUpdateServiceManagementDto;
+import br.com.queue.dto.serviceManagement.ResponseServiceManagementDto;
 import br.com.queue.dto.serviceManagement.update.UpdateServiceManagementDto;
 import br.com.queue.service.serviceManagement.ServiceManagementService;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +27,7 @@ public class ServiceManagementController {
     }
 
     @PatchMapping
-    public ResponseEntity<ResponseUpdateServiceManagementDto> updateServiceManagement(
+    public ResponseEntity<ResponseServiceManagementDto> updateServiceManagement(
             @RequestBody UpdateServiceManagementDto dto
     ) {
 
@@ -38,7 +36,7 @@ public class ServiceManagementController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<ResponseAllServicesManagementDto>> getAllServicesManagement(
+    public ResponseEntity<Page<ResponseServiceManagementDto>> getAllServicesManagement(
             @RequestParam int page,
             @RequestParam int size,
             @RequestParam(required = false) String search
@@ -54,15 +52,13 @@ public class ServiceManagementController {
     ) {
 
         var response = this.serviceManagementService.getServiceManagementById(serviceManagementId);
-
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{serviceManagementId}")
-    public ResponseEntity<Void> deleteServiceManagement(@PathVariable String serviceManagementId) {
+    public ResponseEntity<ResponseServiceManagementDto> deleteServiceManagement(@PathVariable String serviceManagementId) {
 
-        this.serviceManagementService.deleteServiceManagement(serviceManagementId);
-
-        return ResponseEntity.noContent().build();
+        var response = this.serviceManagementService.deleteServiceManagement(serviceManagementId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
     }
 }

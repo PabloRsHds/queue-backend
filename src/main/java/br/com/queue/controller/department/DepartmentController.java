@@ -1,10 +1,8 @@
 package br.com.queue.controller.department;
 
-import br.com.queue.dto.department.allDepartment.ResponseAllDepartmentDto;
+import br.com.queue.dto.department.ResponseDepartmentDto;
 import br.com.queue.dto.department.create.CreateDepartmentDto;
-import br.com.queue.dto.department.create.ResponseDepartmentDto;
 import br.com.queue.dto.department.getDepartment.ResponseGetDepartment;
-import br.com.queue.dto.department.update.ResponseUpdateDepartmentDto;
 import br.com.queue.dto.department.update.UpdateDepartmentDto;
 import br.com.queue.service.department.DepartmentService;
 import jakarta.validation.Valid;
@@ -13,8 +11,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/departments")
@@ -31,14 +27,14 @@ public class DepartmentController {
     }
 
     @PatchMapping
-    public ResponseEntity<ResponseUpdateDepartmentDto> updateDepartment(@RequestBody UpdateDepartmentDto dto) {
+    public ResponseEntity<ResponseDepartmentDto> updateDepartment(@RequestBody UpdateDepartmentDto dto) {
 
         var response = this.departmentService.updateDepartment(dto);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping
-    public ResponseEntity<Page<ResponseAllDepartmentDto>> getAllDepartments(
+    public ResponseEntity<Page<ResponseDepartmentDto>> getAllDepartments(
             @RequestParam int page,
             @RequestParam int size,
             @RequestParam(required = false) String search
@@ -56,9 +52,9 @@ public class DepartmentController {
     }
 
     @DeleteMapping("/{departmentId}")
-    public ResponseEntity<Void> deleteDepartment(@PathVariable String departmentId) {
+    public ResponseEntity<ResponseDepartmentDto> deleteDepartment(@PathVariable String departmentId) {
 
-        this.departmentService.deleteDepartment(departmentId);
-        return ResponseEntity.noContent().build();
+        var response = this.departmentService.deleteDepartment(departmentId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
     }
 }

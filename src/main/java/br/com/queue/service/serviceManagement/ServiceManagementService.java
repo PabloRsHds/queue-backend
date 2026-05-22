@@ -1,11 +1,8 @@
 package br.com.queue.service.serviceManagement;
 
-import br.com.queue.dto.serviceManagement.allServicesManagement.ResponseAllServicesManagementDto;
 import br.com.queue.dto.serviceManagement.create.CreateServiceManagementDto;
-import br.com.queue.dto.serviceManagement.create.ResponseServiceManagementDto;
-import br.com.queue.dto.serviceManagement.update.ResponseUpdateServiceManagementDto;
+import br.com.queue.dto.serviceManagement.ResponseServiceManagementDto;
 import br.com.queue.dto.serviceManagement.update.UpdateServiceManagementDto;
-import br.com.queue.entities.department.Department;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.repositories.department.DepartmentRepository;
 import br.com.queue.repositories.serviceManagement.ServiceManagementRepository;
@@ -50,12 +47,12 @@ public class ServiceManagementService {
     }
 
     @Transactional
-    public ResponseUpdateServiceManagementDto updateServiceManagement(UpdateServiceManagementDto dto) {
+    public ResponseServiceManagementDto updateServiceManagement(UpdateServiceManagementDto dto) {
 
         var service = this.serviceRepository.findByServiceManagementId(dto.serviceManagementId())
                 .orElseThrow(() -> new EntityNotFoundException("Serviço não encontrado"));
 
-        var department = this.departmentRepository.findByDepartmentId(dto.departmentId())
+        var department = this.departmentRepository.findByName(dto.departmentName())
                 .orElseThrow(() -> new EntityNotFoundException("Departamento não encontrado"));
 
         service.setName(dto.name());
@@ -66,7 +63,7 @@ public class ServiceManagementService {
 
         this.serviceRepository.save(service);
 
-        return new ResponseUpdateServiceManagementDto(
+        return new ResponseServiceManagementDto(
                 service.getServiceManagementId(),
                 service.getName(),
                 service.getCode(),
@@ -77,7 +74,7 @@ public class ServiceManagementService {
         );
     }
 
-    public Page<ResponseAllServicesManagementDto> getAllServicesManagement(
+    public Page<ResponseServiceManagementDto> getAllServicesManagement(
             int page,
             int size,
             String search) {
@@ -89,10 +86,12 @@ public class ServiceManagementService {
         Page<ServiceManagement> serviceManagements = this.serviceRepository
                 .findAllWithSearch(normalizedSearch, PageRequest.of(page, size));
 
-        return serviceManagements.map(service -> new ResponseAllServicesManagementDto(
+        return serviceManagements.map(service -> new ResponseServiceManagementDto(
                 service.getServiceManagementId(),
                 service.getName(),
                 service.getCode(),
+                service.getDescription(),
+                service.getDepartment().getDepartmentId(),
                 service.getDepartment().getName(),
                 service.getActive()
         ));
@@ -115,11 +114,24 @@ public class ServiceManagementService {
     }
 
     @Transactional
-    public void deleteServiceManagement(String serviceManagementId) {
+    public ResponseServiceManagementDto deleteServiceManagement(String serviceManagementId) {
 
         var service = this.serviceRepository.findByServiceManagementId(serviceManagementId)
                 .orElseThrow(() -> new EntityNotFoundException("Serviço não encontrado"));
 
+
+        var response = new ResponseServiceManagementDto(
+                service.getServiceManagementId(),
+                service.getName(),
+                service.getCode(),
+                service.getDescription(),
+                service.getDepartment().getDepartmentId(),
+                service.getDepartment().getName(),
+                service.getActive()
+        );
+
         this.serviceRepository.delete(service);
+
+        return response;
     }
 }

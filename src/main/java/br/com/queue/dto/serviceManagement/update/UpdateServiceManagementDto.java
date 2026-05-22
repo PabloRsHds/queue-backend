@@ -7,6 +7,6 @@ public record UpdateServiceManagementDto(
         String code,
         String description,
         Boolean active,
-        String departmentId
+        String departmentName
 ) {
 }

@@ -1,6 +1,6 @@
-package br.com.queue.dto.serviceManagement.update;
+package br.com.queue.dto.serviceManagement;
 
-public record ResponseUpdateServiceManagementDto(
+public record ResponseServiceManagementDto(
 
         String serviceManagementId,
         String name,
