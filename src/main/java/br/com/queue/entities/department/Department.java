@@ -23,8 +23,10 @@ public class Department {
     private String name;
     private String description;
     private Boolean active;
-    private String createdAt;
-    private String updatedAt;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "department", cascade = CascadeType.ALL)
     private List<ServiceManagement> services = new ArrayList<>();

@@ -2,6 +2,7 @@ package br.com.queue.controller.department;
 
 import br.com.queue.dto.department.ResponseDepartmentDto;
 import br.com.queue.dto.department.create.CreateDepartmentDto;
+import br.com.queue.dto.department.getDepartment.ResponseDepartmentNamesDto;
 import br.com.queue.dto.department.getDepartment.ResponseGetDepartment;
 import br.com.queue.dto.department.update.UpdateDepartmentDto;
 import br.com.queue.service.department.DepartmentService;
@@ -11,6 +12,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/departments")
@@ -41,6 +44,13 @@ public class DepartmentController {
     ) {
 
         var response = this.departmentService.getAllDepartments(page, size, search);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/names")
+    public ResponseEntity<List<ResponseDepartmentNamesDto>> getAllDepartmentNames() {
+
+        var response = this.departmentService.getDepartmentNames();
         return ResponseEntity.ok(response);
     }
 

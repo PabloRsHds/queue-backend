@@ -6,7 +6,9 @@ import br.com.queue.entities.department.Department;
 import br.com.queue.entities.schedule.Schedule;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -45,4 +47,9 @@ public class ServiceManagement {
 
     @Column(nullable = false)
     private Boolean active = true;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 }

@@ -1,7 +1,9 @@
 package br.com.queue.service.serviceManagement;
 
-import br.com.queue.dto.serviceManagement.create.CreateServiceManagementDto;
 import br.com.queue.dto.serviceManagement.ResponseServiceManagementDto;
+import br.com.queue.dto.serviceManagement.create.CreateServiceManagementDto;
+import br.com.queue.dto.serviceManagement.getServiceDto.ResponseGetServiceByIdDto;
+import br.com.queue.dto.serviceManagement.statistics.ResponseStatisticsDto;
 import br.com.queue.dto.serviceManagement.update.UpdateServiceManagementDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.repositories.department.DepartmentRepository;
@@ -13,6 +15,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 @Service
 @RequiredArgsConstructor
 public class ServiceManagementService {
@@ -60,7 +64,7 @@ public class ServiceManagementService {
         service.setDescription(dto.description());
         service.setDepartment(department);
         service.setActive(dto.active());
-
+        service.setUpdatedAt(LocalDateTime.now());
         this.serviceRepository.save(service);
 
         return new ResponseServiceManagementDto(
@@ -97,19 +101,29 @@ public class ServiceManagementService {
         ));
     }
 
-    public ResponseServiceManagementDto getServiceManagementById(String serviceManagementId) {
+    public ResponseGetServiceByIdDto getServiceManagementById(String serviceManagementId) {
 
         var service = this.serviceRepository.findByServiceManagementId(serviceManagementId)
                 .orElseThrow(() -> new EntityNotFoundException("Serviço não encontrado"));
 
-        return new ResponseServiceManagementDto(
+        var updateAt = "";
+
+        if (service.getUpdatedAt() != null ) {
+            updateAt = service.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } else {
+            updateAt = null;
+        }
+
+        return new ResponseGetServiceByIdDto(
                 service.getServiceManagementId(),
                 service.getName(),
                 service.getCode(),
                 service.getDescription(),
                 service.getDepartment().getDepartmentId(),
                 service.getDepartment().getName(),
-                service.getActive()
+                service.getActive(),
+                service.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                updateAt
         );
     }
 
@@ -133,5 +147,10 @@ public class ServiceManagementService {
         this.serviceRepository.delete(service);
 
         return response;
+    }
+
+    public ResponseStatisticsDto getStatistics() {
+
+        return this.serviceRepository.getStatistics();
     }
 }

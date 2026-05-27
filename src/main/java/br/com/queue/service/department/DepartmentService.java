@@ -1,7 +1,8 @@
 package br.com.queue.service.department;
 
-import br.com.queue.dto.department.create.CreateDepartmentDto;
 import br.com.queue.dto.department.ResponseDepartmentDto;
+import br.com.queue.dto.department.create.CreateDepartmentDto;
+import br.com.queue.dto.department.getDepartment.ResponseDepartmentNamesDto;
 import br.com.queue.dto.department.getDepartment.ResponseGetDepartment;
 import br.com.queue.dto.department.update.UpdateDepartmentDto;
 import br.com.queue.entities.department.Department;
@@ -14,9 +15,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -32,8 +32,6 @@ public class DepartmentService {
         entity.setName(dto.name());
         entity.setDescription(dto.description());
         entity.setActive(true);
-        entity.setCreatedAt(LocalDateTime.now(ZoneId.of("America/Sao_Paulo"))
-                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
 
         this.departmentRepository.save(entity);
 
@@ -85,6 +83,14 @@ public class DepartmentService {
         ));
     }
 
+    public List<ResponseDepartmentNamesDto> getDepartmentNames(){
+
+        return this.departmentRepository.findAll()
+                .stream()
+                .map(department -> new ResponseDepartmentNamesDto(department.getName()))
+                .toList();
+    }
+
     public ResponseGetDepartment getDepartmentById(String departmentId) {
 
         Department department = this.departmentRepository.findByDepartmentId(departmentId)
@@ -92,13 +98,21 @@ public class DepartmentService {
 
         var services = department.getServices().stream().map(ServiceManagement::getName).toList();
 
+        var updatedAt = "";
+
+        if (department.getUpdatedAt() != null) {
+            updatedAt = department.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } else {
+            updatedAt = null;
+        }
+
         return new ResponseGetDepartment(
                 department.getDepartmentId(),
                 department.getName(),
                 department.getDescription(),
                 department.getActive(),
-                department.getCreatedAt(),
-                department.getUpdatedAt(),
+                department.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                updatedAt,
                 services
         );
     }

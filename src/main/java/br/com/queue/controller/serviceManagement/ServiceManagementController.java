@@ -2,6 +2,8 @@ package br.com.queue.controller.serviceManagement;
 
 import br.com.queue.dto.serviceManagement.create.CreateServiceManagementDto;
 import br.com.queue.dto.serviceManagement.ResponseServiceManagementDto;
+import br.com.queue.dto.serviceManagement.getServiceDto.ResponseGetServiceByIdDto;
+import br.com.queue.dto.serviceManagement.statistics.ResponseStatisticsDto;
 import br.com.queue.dto.serviceManagement.update.UpdateServiceManagementDto;
 import br.com.queue.service.serviceManagement.ServiceManagementService;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +49,7 @@ public class ServiceManagementController {
     }
 
     @GetMapping("/{serviceManagementId}")
-    public ResponseEntity<ResponseServiceManagementDto> getServiceManagementById(
+    public ResponseEntity<ResponseGetServiceByIdDto> getServiceManagementById(
             @PathVariable String serviceManagementId
     ) {
 
@@ -60,5 +62,12 @@ public class ServiceManagementController {
 
         var response = this.serviceManagementService.deleteServiceManagement(serviceManagementId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+    }
+
+    @GetMapping("/statistics")
+    public ResponseEntity<ResponseStatisticsDto> getStatistics() {
+
+        var response = this.serviceManagementService.getStatistics();
+        return ResponseEntity.ok(response);
     }
 }

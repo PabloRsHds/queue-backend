@@ -1,5 +1,6 @@
 package br.com.queue.repositories.serviceManagement;
 
+import br.com.queue.dto.serviceManagement.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.department.Department;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import org.springframework.data.domain.Page;
@@ -13,20 +14,64 @@ import java.util.Set;
 
 public interface ServiceManagementRepository extends JpaRepository<ServiceManagement, String> {
 
+    // Importação de extenção para acentuações no sql
+    // CREATE EXTENSION IF NOT EXISTS unaccent;
+
     Optional<ServiceManagement> findByServiceManagementId(String serviceManagementId);
 
-    @Query("""
-            SELECT sm
-            FROM ServiceManagement sm
-            WHERE sm.serviceManagementId IN :serviceManagementIds
-        """)
+    @Query(value = """
+            SELECT s
+            FROM tb_service_management s
+            WHERE s.service_management_id IN :serviceManagementIds
+        """, nativeQuery = true)
     Set<ServiceManagement> findAllByServiceManagementIdIn(
             @Param("serviceManagementIds") Set<String> serviceManagementIds);
 
-    @Query("""
-    SELECT d
-    FROM ServiceManagement d
-    WHERE (:search IS NULL OR :search = '' OR LOWER(d.name) LIKE LOWER(CONCAT('%', :search, '%')))
-    """)
-    Page<ServiceManagement> findAllWithSearch(@Param("search") String search, Pageable pageable);
+    @Query(value = """
+            SELECT *
+            FROM tb_service_management s
+            WHERE (
+                :search IS NULL
+                OR :search = ''
+                OR unaccent(LOWER(s.name))
+                   LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
+            )
+            """,
+            countQuery = """
+            SELECT COUNT(*)
+            FROM tb_service_management s
+            WHERE (
+                :search IS NULL
+                OR :search = ''
+                OR unaccent(LOWER(s.name))
+                   LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
+            )
+            """,
+            nativeQuery = true
+    )
+    Page<ServiceManagement> findAllWithSearch(@Param("search") String search,Pageable pageable);
+
+    @Query(value = """
+            SELECT
+                COUNT(*) AS totalElements,
+                COUNT(*) FILTER (WHERE active = true) AS totalElementsActive,
+                COUNT(*) FILTER (WHERE active = false) AS totalElementsInactive,
+                ROUND(
+                    (
+                        COUNT(*) FILTER (WHERE active = true)::numeric
+                        / NULLIF(COUNT(*), 0)
+                    ) * 100,
+                    2
+                ) AS percentageActive,
+                ROUND(
+                    (
+                        COUNT(*) FILTER (WHERE active = false)::numeric
+                        / NULLIF(COUNT(*), 0)
+                    ) * 100,
+                    2
+                ) AS percentageInactive
+            FROM tb_service_management
+            """,
+            nativeQuery = true)
+    ResponseStatisticsDto getStatistics();
 }
