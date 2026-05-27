@@ -87,18 +87,8 @@ public class ServiceManagementService {
                 ? null
                 : search.trim();
 
-        Page<ServiceManagement> serviceManagements = this.serviceRepository
-                .findAllWithSearch(normalizedSearch, PageRequest.of(page, size));
-
-        return serviceManagements.map(service -> new ResponseServiceManagementDto(
-                service.getServiceManagementId(),
-                service.getName(),
-                service.getCode(),
-                service.getDescription(),
-                service.getDepartment().getDepartmentId(),
-                service.getDepartment().getName(),
-                service.getActive()
-        ));
+        return this.serviceRepository.findAllWithSearch(normalizedSearch,
+                PageRequest.of(page, size));
     }
 
     public ResponseGetServiceByIdDto getServiceManagementById(String serviceManagementId) {

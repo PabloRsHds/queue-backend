@@ -16,7 +16,7 @@ import java.util.Set;
 
 @Entity
 @Data
-@Table(name = "tb_service_management ")
+@Table(name = "tb_service_management")
 public class ServiceManagement {
 
     @Id
