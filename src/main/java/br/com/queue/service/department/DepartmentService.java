@@ -38,32 +38,33 @@ public class DepartmentService {
         return new ResponseDepartmentDto(
                 entity.getDepartmentId(),
                 entity.getName(),
-                entity.getDescription()
+                entity.getDescription(),
+                entity.getActive()
         );
     }
 
     @Transactional
     public ResponseDepartmentDto updateDepartment(UpdateDepartmentDto dto) {
 
-        Department department = this.departmentRepository.findByDepartmentId(dto.departmentId())
+        var entity = this.departmentRepository.findByDepartmentId(dto.departmentId())
                 .orElseThrow(() -> new EntityNotFoundException("Departamento não encontrado"));
 
         if (!dto.name().isBlank()) {
-            department.setName(dto.name());
+            entity.setName(dto.name());
         }
 
         if (!dto.description().isBlank()) {
-            department.setDescription(dto.description());
+            entity.setDescription(dto.description());
         }
 
-        department.setDescription(dto.description());
-
-        this.departmentRepository.save(department);
+        entity.setActive(dto.active());
+        this.departmentRepository.save(entity);
 
         return new ResponseDepartmentDto(
-                department.getDepartmentId(),
-                department.getName(),
-                department.getDescription()
+                entity.getDepartmentId(),
+                entity.getName(),
+                entity.getDescription(),
+                entity.getActive()
         );
     }
 
@@ -73,14 +74,10 @@ public class DepartmentService {
                 ? null
                 : search.trim();
 
-        Page<Department> departments = this.departmentRepository
-                .findAllWithSearch(normalizedSearch, PageRequest.of(page, size));
-
-        return departments.map(department -> new ResponseDepartmentDto(
-                department.getDepartmentId(),
-                department.getName(),
-                department.getDescription()
-        ));
+        return this.departmentRepository.findAllWithSearch(
+                normalizedSearch,
+                PageRequest.of(page, size)
+        );
     }
 
     public List<ResponseDepartmentNamesDto> getDepartmentNames(){
@@ -120,16 +117,17 @@ public class DepartmentService {
     @Transactional
     public ResponseDepartmentDto deleteDepartment(String departmentId) {
 
-        Department department = this.departmentRepository.findByDepartmentId(departmentId)
+        var entity = this.departmentRepository.findByDepartmentId(departmentId)
                 .orElseThrow(() -> new EntityNotFoundException("Departamento não encontrado"));
 
         var response = new ResponseDepartmentDto(
-                department.getDepartmentId(),
-                department.getName(),
-                department.getDescription()
+                entity.getDepartmentId(),
+                entity.getName(),
+                entity.getDescription(),
+                entity.getActive()
         );
 
-        this.departmentRepository.delete(department);
+        this.departmentRepository.delete(entity);
 
         return response;
     }

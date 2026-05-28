@@ -1,5 +1,6 @@
 package br.com.queue.repositories.department;
 
+import br.com.queue.dto.department.ResponseDepartmentDto;
 import br.com.queue.entities.department.Department;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,10 +15,30 @@ public interface DepartmentRepository extends JpaRepository<Department, String> 
     Optional<Department> findByName(String name);
     Optional<Department> findByDepartmentId(String departmentId);
 
-    @Query("""
-    SELECT d
-    FROM Department d
-    WHERE (:search IS NULL OR :search = '' OR LOWER(d.name) LIKE LOWER(CONCAT('%', :search, '%')))
-    """)
-    Page<Department> findAllWithSearch(@Param("search") String search, Pageable pageable);
+    @Query(value = """
+    SELECT
+        d.department_id AS departmentId ,
+        d.name AS name,
+        d.description AS description,
+        d.active AS active
+    FROM tb_departments d
+    WHERE (
+        :search IS NULL
+        OR :search = ''
+        OR UNACCENT(LOWER(d.name)) LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
+    )
+    ORDER BY COALESCE(d.updated_at, d.created_at) DESC;
+    """,
+        countQuery = """
+    SELECT COUNT(*)
+    FROM tb_departments d
+    WHERE (
+        :search IS NULL
+        OR :search = ''
+        OR UNACCENT(LOWER(d.name)) LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
+    )
+    """,
+        nativeQuery = true
+    )
+    Page<ResponseDepartmentDto> findAllWithSearch(@Param("search") String search, Pageable pageable);
 }

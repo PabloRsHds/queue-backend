@@ -24,8 +24,10 @@ public class Department {
     private String description;
     private Boolean active;
 
+    @Column(name = "created_at")
     @CreationTimestamp
     private LocalDateTime createdAt;
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "department", cascade = CascadeType.ALL)

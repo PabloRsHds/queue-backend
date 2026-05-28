@@ -17,13 +17,10 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
     // Importação de extenção para acentuações no sql
     // CREATE EXTENSION IF NOT EXISTS unaccent;
 
-    // Importação de extenção para priorizar um segmento no orderById
-    // CREATE EXTENSION IF NOT EXISTS unaccent;
-
     Optional<ServiceManagement> findByServiceManagementId(String serviceManagementId);
 
     @Query(value = """
-            SELECT s
+            SELECT *
             FROM tb_service_management s
             WHERE s.service_management_id IN :serviceManagementIds
         """, nativeQuery = true)
