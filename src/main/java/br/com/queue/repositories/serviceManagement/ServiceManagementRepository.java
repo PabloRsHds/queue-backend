@@ -17,6 +17,9 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
     // Importação de extenção para acentuações no sql
     // CREATE EXTENSION IF NOT EXISTS unaccent;
 
+    // Importação de extenção para priorizar um segmento no orderById
+    // CREATE EXTENSION IF NOT EXISTS unaccent;
+
     Optional<ServiceManagement> findByServiceManagementId(String serviceManagementId);
 
     @Query(value = """
@@ -49,6 +52,7 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
             OR unaccent(LOWER(d.name))
                 LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
         )
+        ORDER BY COALESCE(s.updated_at, s.created_at) DESC
         """,
             countQuery = """
         SELECT COUNT(*)

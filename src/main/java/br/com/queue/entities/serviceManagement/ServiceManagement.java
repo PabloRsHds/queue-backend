@@ -48,8 +48,10 @@ public class ServiceManagement {
     @Column(nullable = false)
     private Boolean active = true;
 
+    @Column(name = "created_at")
     @CreationTimestamp
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 }
