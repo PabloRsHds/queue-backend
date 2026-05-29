@@ -1,9 +1,7 @@
 package br.com.queue.controller.user;
 
-import br.com.queue.dtos.user.allUsers.ResponseAllUsersDto;
+import br.com.queue.dtos.user.ResponseUserDto;
 import br.com.queue.dtos.user.create.CreateUserDto;
-import br.com.queue.dtos.user.create.ResponseUserDto;
-import br.com.queue.dtos.user.update.ResponseUpdateUserDto;
 import br.com.queue.dtos.user.update.UpdateUserDto;
 import br.com.queue.service.user.UserService;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +27,7 @@ public class UserController {
     }
 
     @PutMapping
-    public ResponseEntity<ResponseUpdateUserDto> update(
+    public ResponseEntity<ResponseUserDto> update(
             @RequestBody UpdateUserDto dto
     ) {
 
@@ -38,12 +36,13 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<ResponseAllUsersDto>> getAllUsers(
+    public ResponseEntity<Page<ResponseUserDto>> getAllUsers(
             @RequestParam int page,
-            @RequestParam int size
+            @RequestParam int size,
+            @RequestParam(required = false) String search
     ) {
 
-        var response = this.userService.getAllUsers(page, size);
+        var response = this.userService.getAllUsers(page, size, search);
         return ResponseEntity.ok(response);
     }
 
@@ -57,9 +56,9 @@ public class UserController {
     }
 
     @DeleteMapping("/{userId}")
-    public ResponseEntity<Void> delete(@PathVariable String userId) {
+    public ResponseEntity<ResponseUserDto> delete(@PathVariable String userId) {
 
-        this.userService.deleteUser(userId);
-        return ResponseEntity.noContent().build();
+        var response = this.userService.deleteUser(userId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
     }
 }

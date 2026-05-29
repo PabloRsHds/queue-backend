@@ -1,9 +1,7 @@
 package br.com.queue.service.user;
 
-import br.com.queue.dtos.user.allUsers.ResponseAllUsersDto;
+import br.com.queue.dtos.user.ResponseUserDto;
 import br.com.queue.dtos.user.create.CreateUserDto;
-import br.com.queue.dtos.user.create.ResponseUserDto;
-import br.com.queue.dtos.user.update.ResponseUpdateUserDto;
 import br.com.queue.dtos.user.update.UpdateUserDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.entities.user.User;
@@ -18,6 +16,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -46,93 +46,121 @@ public class UserService {
         entity.setCounterNumber(dto.counterNumber());
         entity.setActive(true);
         entity.setServices(services);
+        entity.setCreatedAt(LocalDateTime.now());
 
         this.userRepository.save(entity);
+
+        var updateAt = "";
+
+        if (entity.getUpdatedAt() != null ) {
+            updateAt = entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } else {
+            updateAt = null;
+        }
 
         return new ResponseUserDto(
                 entity.getUserId(),
                 entity.getUsername(),
+                entity.getName(),
                 entity.getSurname(),
                 entity.getEmail(),
                 entity.getRole().name(),
                 entity.getCounterNumber(),
-                entity.getActive()
+                entity.getActive(),
+                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                updateAt
         );
     }
 
     @Transactional
-    public ResponseUpdateUserDto updateUser(UpdateUserDto dto) {
+    public ResponseUserDto updateUser(UpdateUserDto dto) {
 
-        var user = this.userRepository.findByUserId(dto.userId())
+        var entity = this.userRepository.findByUserId(dto.userId())
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
 
         Set<ServiceManagement> services = new HashSet<>(
                 this.serviceManagementRepository.findAllByServiceManagementIdIn(dto.serviceIds())
         );
 
-        user.setUsername(dto.username());
-        user.setName(dto.name());
-        user.setSurname(dto.surname());
-        user.setEmail(dto.email());
-        user.setRole(Role.valueOf(dto.role()));
-        user.setCounterNumber(dto.counterNumber());
-        user.setActive(dto.active());
-        user.setServices(services);
+        entity.setUsername(dto.username());
+        entity.setName(dto.name());
+        entity.setSurname(dto.surname());
+        entity.setEmail(dto.email());
+        entity.setRole(Role.valueOf(dto.role()));
+        entity.setCounterNumber(dto.counterNumber());
+        entity.setActive(dto.active());
+        entity.setServices(services);
+        entity.setUpdatedAt(LocalDateTime.now());
 
         if (dto.password() != null && !dto.password().isBlank()) {
-            user.setPassword(passwordEncoder.encode(dto.password()));
+            entity.setPassword(passwordEncoder.encode(dto.password()));
         }
 
-        this.userRepository.save(user);
+        this.userRepository.save(entity);
 
-        return new ResponseUpdateUserDto(
-                user.getUserId(),
-                user.getUsername(),
-                user.getSurname(),
-                user.getEmail(),
-                user.getRole().name(),
-                user.getCounterNumber(),
-                user.getActive()
+        return new ResponseUserDto(
+                entity.getUserId(),
+                entity.getUsername(),
+                entity.getName(),
+                entity.getSurname(),
+                entity.getEmail(),
+                entity.getRole().name(),
+                entity.getCounterNumber(),
+                entity.getActive(),
+                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
         );
     }
 
-    public Page<ResponseAllUsersDto> getAllUsers(int page, int size) {
+    public Page<ResponseUserDto> getAllUsers(int page, int size, String search) {
 
-        return this.userRepository.findAll(PageRequest.of(page, size))
-                .map(user -> new ResponseAllUsersDto(
-                        user.getUserId(),
-                        user.getUsername(),
-                        user.getName(),
-                        user.getSurname(),
-                        user.getEmail(),
-                        user.getRole().name(),
-                        user.getCounterNumber(),
-                        user.getActive()
-                ));
+        String normalizedSearch = (search == null || search.isBlank())
+                ? null
+                : search.trim();
+
+        return this.userRepository.findAllWithSearch(normalizedSearch,
+                PageRequest.of(page, size));
     }
 
     public ResponseUserDto getUserById(String userId) {
 
-        var user = this.userRepository.findByUserId(userId)
+        var entity = this.userRepository.findByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
 
         return new ResponseUserDto(
-                user.getUserId(),
-                user.getUsername(),
-                user.getSurname(),
-                user.getEmail(),
-                user.getRole().name(),
-                user.getCounterNumber(),
-                user.getActive()
+                entity.getUserId(),
+                entity.getUsername(),
+                entity.getName(),
+                entity.getSurname(),
+                entity.getEmail(),
+                entity.getRole().name(),
+                entity.getCounterNumber(),
+                entity.getActive(),
+                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
         );
     }
 
     @Transactional
-    public void deleteUser(String userId) {
+    public ResponseUserDto deleteUser(String userId) {
 
-        var user = this.userRepository.findByUserId(userId)
+        var entity = this.userRepository.findByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
 
-        this.userRepository.delete(user);
+        var response = new ResponseUserDto(
+                entity.getUserId(),
+                entity.getUsername(),
+                entity.getName(),
+                entity.getSurname(),
+                entity.getEmail(),
+                entity.getRole().name(),
+                entity.getCounterNumber(),
+                entity.getActive(),
+                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+        );
+
+        this.userRepository.delete(entity);
+        return response;
     }
 }

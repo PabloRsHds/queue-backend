@@ -5,6 +5,7 @@ import br.com.queue.enums.Role;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -50,4 +51,10 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "service_management_id")
     )
     private Set<ServiceManagement> services = new HashSet<>();
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 }
