@@ -1,10 +1,11 @@
 package br.com.queue.service.department;
 
-import br.com.queue.dto.department.ResponseDepartmentDto;
-import br.com.queue.dto.department.create.CreateDepartmentDto;
-import br.com.queue.dto.department.getDepartment.ResponseDepartmentNamesDto;
-import br.com.queue.dto.department.getDepartment.ResponseGetDepartment;
-import br.com.queue.dto.department.update.UpdateDepartmentDto;
+import br.com.queue.dtos.department.ResponseDepartmentDto;
+import br.com.queue.dtos.department.create.CreateDepartmentDto;
+import br.com.queue.dtos.department.getDepartment.ResponseDepartmentNamesDto;
+import br.com.queue.dtos.department.getDepartment.ResponseGetDepartment;
+import br.com.queue.dtos.department.statistics.ResponseStatisticsDto;
+import br.com.queue.dtos.department.update.UpdateDepartmentDto;
 import br.com.queue.entities.department.Department;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.repositories.department.DepartmentRepository;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -58,6 +60,7 @@ public class DepartmentService {
         }
 
         entity.setActive(dto.active());
+        entity.setUpdatedAt(LocalDateTime.now());
         this.departmentRepository.save(entity);
 
         return new ResponseDepartmentDto(
@@ -130,5 +133,10 @@ public class DepartmentService {
         this.departmentRepository.delete(entity);
 
         return response;
+    }
+
+    public ResponseStatisticsDto getStatistics() {
+
+        return this.departmentRepository.getStatistics();
     }
 }

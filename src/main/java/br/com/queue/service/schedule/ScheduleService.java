@@ -1,10 +1,10 @@
 package br.com.queue.service.schedule;
 
-import br.com.queue.dto.schedule.create.CreateScheduleDto;
-import br.com.queue.dto.schedule.create.ResponseScheduleDto;
-import br.com.queue.dto.schedule.allSchedules.ResponseAllSchedulesDto;
-import br.com.queue.dto.schedule.update.ResponseUpdateScheduleDto;
-import br.com.queue.dto.schedule.update.UpdateScheduleDto;
+import br.com.queue.dtos.schedule.create.CreateScheduleDto;
+import br.com.queue.dtos.schedule.create.ResponseScheduleDto;
+import br.com.queue.dtos.schedule.allSchedules.ResponseAllSchedulesDto;
+import br.com.queue.dtos.schedule.update.ResponseUpdateScheduleDto;
+import br.com.queue.dtos.schedule.update.UpdateScheduleDto;
 import br.com.queue.entities.schedule.Schedule;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.enums.ScheduleStatus;

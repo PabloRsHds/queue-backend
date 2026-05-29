@@ -1,7 +1,7 @@
 package br.com.queue.repositories.serviceManagement;
 
-import br.com.queue.dto.serviceManagement.ResponseServiceManagementDto;
-import br.com.queue.dto.serviceManagement.statistics.ResponseStatisticsDto;
+import br.com.queue.dtos.serviceManagement.ResponseServiceManagementDto;
+import br.com.queue.dtos.serviceManagement.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

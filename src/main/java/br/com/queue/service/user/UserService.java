@@ -1,10 +1,10 @@
 package br.com.queue.service.user;
 
-import br.com.queue.dto.user.allUsers.ResponseAllUsersDto;
-import br.com.queue.dto.user.create.CreateUserDto;
-import br.com.queue.dto.user.create.ResponseUserDto;
-import br.com.queue.dto.user.update.ResponseUpdateUserDto;
-import br.com.queue.dto.user.update.UpdateUserDto;
+import br.com.queue.dtos.user.allUsers.ResponseAllUsersDto;
+import br.com.queue.dtos.user.create.CreateUserDto;
+import br.com.queue.dtos.user.create.ResponseUserDto;
+import br.com.queue.dtos.user.update.ResponseUpdateUserDto;
+import br.com.queue.dtos.user.update.UpdateUserDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.entities.user.User;
 import br.com.queue.enums.Role;

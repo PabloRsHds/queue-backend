@@ -1,10 +1,10 @@
 package br.com.queue.controller.attendance;
 
-import br.com.queue.dto.attendance.allAttendances.ResponseAllAttendances;
-import br.com.queue.dto.attendance.create.CreateAttendanceDto;
-import br.com.queue.dto.attendance.create.FinishAttendanceDto;
-import br.com.queue.dto.attendance.finish.ResponseAttendanceDto;
-import br.com.queue.dto.attendance.finish.ResponseFinishAttendanceDto;
+import br.com.queue.dtos.attendance.allAttendances.ResponseAllAttendances;
+import br.com.queue.dtos.attendance.create.CreateAttendanceDto;
+import br.com.queue.dtos.attendance.create.FinishAttendanceDto;
+import br.com.queue.dtos.attendance.finish.ResponseAttendanceDto;
+import br.com.queue.dtos.attendance.finish.ResponseFinishAttendanceDto;
 import br.com.queue.service.attendance.AttendanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

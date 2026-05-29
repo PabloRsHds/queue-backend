@@ -1,14 +1,14 @@
 package br.com.queue.service.ticket;
 
-import br.com.queue.dto.ticket.allTickets.ResponseAllTicketsDto;
-import br.com.queue.dto.ticket.callTicket.CallTicketDto;
-import br.com.queue.dto.ticket.callTicket.ResponseCallTicketDto;
-import br.com.queue.dto.ticket.create.CreateTicketDto;
-import br.com.queue.dto.ticket.create.ResponseTicketDto;
-import br.com.queue.dto.ticket.finishTicket.FinishTicketDto;
-import br.com.queue.dto.ticket.finishTicket.ResponseFinishTicketDto;
-import br.com.queue.dto.ticket.startAttendance.ResponseStartAttendanceDto;
-import br.com.queue.dto.ticket.startAttendance.StartAttendanceDto;
+import br.com.queue.dtos.ticket.allTickets.ResponseAllTicketsDto;
+import br.com.queue.dtos.ticket.callTicket.CallTicketDto;
+import br.com.queue.dtos.ticket.callTicket.ResponseCallTicketDto;
+import br.com.queue.dtos.ticket.create.CreateTicketDto;
+import br.com.queue.dtos.ticket.create.ResponseTicketDto;
+import br.com.queue.dtos.ticket.finishTicket.FinishTicketDto;
+import br.com.queue.dtos.ticket.finishTicket.ResponseFinishTicketDto;
+import br.com.queue.dtos.ticket.startAttendance.ResponseStartAttendanceDto;
+import br.com.queue.dtos.ticket.startAttendance.StartAttendanceDto;
 import br.com.queue.entities.schedule.Schedule;
 import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.entities.user.User;

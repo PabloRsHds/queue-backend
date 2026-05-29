@@ -1,10 +1,10 @@
 package br.com.queue.controller.serviceManagement;
 
-import br.com.queue.dto.serviceManagement.create.CreateServiceManagementDto;
-import br.com.queue.dto.serviceManagement.ResponseServiceManagementDto;
-import br.com.queue.dto.serviceManagement.getServiceDto.ResponseGetServiceByIdDto;
-import br.com.queue.dto.serviceManagement.statistics.ResponseStatisticsDto;
-import br.com.queue.dto.serviceManagement.update.UpdateServiceManagementDto;
+import br.com.queue.dtos.serviceManagement.create.CreateServiceManagementDto;
+import br.com.queue.dtos.serviceManagement.ResponseServiceManagementDto;
+import br.com.queue.dtos.serviceManagement.getServiceDto.ResponseGetServiceByIdDto;
+import br.com.queue.dtos.serviceManagement.statistics.ResponseStatisticsDto;
+import br.com.queue.dtos.serviceManagement.update.UpdateServiceManagementDto;
 import br.com.queue.service.serviceManagement.ServiceManagementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

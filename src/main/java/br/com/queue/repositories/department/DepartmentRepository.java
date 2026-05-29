@@ -1,6 +1,7 @@
 package br.com.queue.repositories.department;
 
-import br.com.queue.dto.department.ResponseDepartmentDto;
+import br.com.queue.dtos.department.ResponseDepartmentDto;
+import br.com.queue.dtos.department.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.department.Department;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,7 +28,7 @@ public interface DepartmentRepository extends JpaRepository<Department, String> 
         OR :search = ''
         OR UNACCENT(LOWER(d.name)) LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
     )
-    ORDER BY COALESCE(d.updated_at, d.created_at) DESC;
+    ORDER BY COALESCE(d.updated_at, d.created_at) DESC
     """,
         countQuery = """
     SELECT COUNT(*)
@@ -41,4 +42,29 @@ public interface DepartmentRepository extends JpaRepository<Department, String> 
         nativeQuery = true
     )
     Page<ResponseDepartmentDto> findAllWithSearch(@Param("search") String search, Pageable pageable);
+
+
+    @Query(value = """
+            SELECT
+                COUNT(*) AS totalElements,
+                COUNT(*) FILTER (WHERE active = true) AS totalElementsActive,
+                COUNT(*) FILTER (WHERE active = false) AS totalElementsInactive,
+                ROUND(
+                    (
+                        COUNT(*) FILTER (WHERE active = true)::numeric
+                        / NULLIF(COUNT(*), 0)
+                    ) * 100,
+                    2
+                ) AS percentageActive,
+                ROUND(
+                    (
+                        COUNT(*) FILTER (WHERE active = false)::numeric
+                        / NULLIF(COUNT(*), 0)
+                    ) * 100,
+                    2
+                ) AS percentageInactive
+            FROM tb_departments
+            """,
+            nativeQuery = true)
+    ResponseStatisticsDto getStatistics();
 }

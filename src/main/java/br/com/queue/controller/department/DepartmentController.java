@@ -1,10 +1,11 @@
 package br.com.queue.controller.department;
 
-import br.com.queue.dto.department.ResponseDepartmentDto;
-import br.com.queue.dto.department.create.CreateDepartmentDto;
-import br.com.queue.dto.department.getDepartment.ResponseDepartmentNamesDto;
-import br.com.queue.dto.department.getDepartment.ResponseGetDepartment;
-import br.com.queue.dto.department.update.UpdateDepartmentDto;
+import br.com.queue.dtos.department.ResponseDepartmentDto;
+import br.com.queue.dtos.department.create.CreateDepartmentDto;
+import br.com.queue.dtos.department.getDepartment.ResponseDepartmentNamesDto;
+import br.com.queue.dtos.department.getDepartment.ResponseGetDepartment;
+import br.com.queue.dtos.department.statistics.ResponseStatisticsDto;
+import br.com.queue.dtos.department.update.UpdateDepartmentDto;
 import br.com.queue.service.department.DepartmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -66,5 +67,12 @@ public class DepartmentController {
 
         var response = this.departmentService.deleteDepartment(departmentId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+    }
+
+    @GetMapping("/statistics")
+    public ResponseEntity<ResponseStatisticsDto> getStatistics() {
+
+        var response = this.departmentService.getStatistics();
+        return ResponseEntity.ok(response);
     }
 }
