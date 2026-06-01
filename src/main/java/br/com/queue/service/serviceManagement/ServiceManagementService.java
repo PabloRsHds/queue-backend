@@ -3,6 +3,7 @@ package br.com.queue.service.serviceManagement;
 import br.com.queue.dtos.serviceManagement.ResponseServiceManagementDto;
 import br.com.queue.dtos.serviceManagement.create.CreateServiceManagementDto;
 import br.com.queue.dtos.serviceManagement.getServiceDto.ResponseGetServiceByIdDto;
+import br.com.queue.dtos.serviceManagement.list_service.ResponseServicesForCreatedUser;
 import br.com.queue.dtos.serviceManagement.update.UpdateServiceManagementDto;
 import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
@@ -17,6 +18,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class ServiceManagementService {
@@ -89,6 +92,19 @@ public class ServiceManagementService {
 
         return this.serviceRepository.findAllWithSearch(normalizedSearch,
                 PageRequest.of(page, size));
+    }
+
+    public List<ResponseServicesForCreatedUser> servicesForCreatedUser() {
+
+        return this.serviceRepository.findAll()
+                .stream()
+                .map(service ->
+                        new ResponseServicesForCreatedUser(
+                                service.getServiceManagementId(),
+                                service.getName(),
+                                service.getDepartment().getName())
+                )
+                .toList();
     }
 
     public ResponseGetServiceByIdDto getServiceManagementById(String serviceManagementId) {

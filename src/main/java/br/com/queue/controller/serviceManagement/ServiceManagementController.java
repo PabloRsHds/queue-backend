@@ -3,6 +3,7 @@ package br.com.queue.controller.serviceManagement;
 import br.com.queue.dtos.serviceManagement.create.CreateServiceManagementDto;
 import br.com.queue.dtos.serviceManagement.ResponseServiceManagementDto;
 import br.com.queue.dtos.serviceManagement.getServiceDto.ResponseGetServiceByIdDto;
+import br.com.queue.dtos.serviceManagement.list_service.ResponseServicesForCreatedUser;
 import br.com.queue.dtos.serviceManagement.update.UpdateServiceManagementDto;
 import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.service.serviceManagement.ServiceManagementService;
@@ -11,6 +12,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/services")
@@ -54,6 +57,12 @@ public class ServiceManagementController {
     ) {
 
         var response = this.serviceManagementService.getServiceManagementById(serviceManagementId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/service-for-created-user")
+    public ResponseEntity<List<ResponseServicesForCreatedUser>> servicesForCreatedUser() {
+        var response = this.serviceManagementService.servicesForCreatedUser();
         return ResponseEntity.ok(response);
     }
 
