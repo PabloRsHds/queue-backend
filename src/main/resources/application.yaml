@@ -1,8 +1,8 @@
 spring:
   datasource:
-    username: postgres
+    username: root
     url: jdbc:postgresql://localhost:5432/queue
-    password: 8712
+    password: root
   jpa:
     properties:
       hibernate:

@@ -1,7 +1,7 @@
 package br.com.queue.repositories.department;
 
 import br.com.queue.dtos.department.ResponseDepartmentDto;
-import br.com.queue.dtos.department.statistics.ResponseStatisticsDto;
+import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.department.Department;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

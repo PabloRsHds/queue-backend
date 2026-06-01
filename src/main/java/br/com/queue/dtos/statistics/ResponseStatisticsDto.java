@@ -1,4 +1,4 @@
-package br.com.queue.dtos.serviceManagement.statistics;
+package br.com.queue.dtos.statistics;
 
 import java.math.BigDecimal;
 

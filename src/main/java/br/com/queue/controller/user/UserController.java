@@ -1,8 +1,10 @@
 package br.com.queue.controller.user;
 
+import br.com.queue.dtos.statistics.ResponseUserStatisticsDto;
 import br.com.queue.dtos.user.ResponseUserDto;
 import br.com.queue.dtos.user.create.CreateUserDto;
 import br.com.queue.dtos.user.update.UpdateUserDto;
+import br.com.queue.dtos.user.users.ResponseAllUsersDto;
 import br.com.queue.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -36,7 +38,7 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<ResponseUserDto>> getAllUsers(
+    public ResponseEntity<Page<ResponseAllUsersDto>> getAllUsers(
             @RequestParam int page,
             @RequestParam int size,
             @RequestParam(required = false) String search
@@ -60,5 +62,12 @@ public class UserController {
 
         var response = this.userService.deleteUser(userId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+    }
+
+    @GetMapping("/statistics")
+    public ResponseEntity<ResponseUserStatisticsDto> getStatistics() {
+
+        var response = this.userService.getStatistics();
+        return ResponseEntity.ok(response);
     }
 }

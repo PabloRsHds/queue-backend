@@ -1,8 +1,9 @@
-package br.com.queue.dtos.department.statistics;
+package br.com.queue.dtos.statistics;
 
 import java.math.BigDecimal;
 
-public record ResponseStatisticsDto(
+public record ResponseUserStatisticsDto(
+        Long admins,
         Long totalElements,
         Long totalElementsActive,
         Long totalElementsInactive,

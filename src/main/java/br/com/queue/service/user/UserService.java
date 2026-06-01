@@ -1,8 +1,10 @@
 package br.com.queue.service.user;
 
+import br.com.queue.dtos.statistics.ResponseUserStatisticsDto;
 import br.com.queue.dtos.user.ResponseUserDto;
 import br.com.queue.dtos.user.create.CreateUserDto;
 import br.com.queue.dtos.user.update.UpdateUserDto;
+import br.com.queue.dtos.user.users.ResponseAllUsersDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.entities.user.User;
 import br.com.queue.enums.Role;
@@ -40,6 +42,7 @@ public class UserService {
         entity.setUsername(dto.username());
         entity.setName(dto.name());
         entity.setSurname(dto.surname());
+        entity.setPhone(dto.phone());
         entity.setEmail(dto.email());
         entity.setPassword(passwordEncoder.encode(dto.password()));
         entity.setRole(Role.valueOf(dto.role()));
@@ -112,7 +115,7 @@ public class UserService {
         );
     }
 
-    public Page<ResponseUserDto> getAllUsers(int page, int size, String search) {
+    public Page<ResponseAllUsersDto> getAllUsers(int page, int size, String search) {
 
         String normalizedSearch = (search == null || search.isBlank())
                 ? null
@@ -162,5 +165,10 @@ public class UserService {
 
         this.userRepository.delete(entity);
         return response;
+    }
+
+    public ResponseUserStatisticsDto getStatistics() {
+
+        return this.userRepository.getStatistics();
     }
 }
