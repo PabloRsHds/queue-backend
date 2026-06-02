@@ -98,6 +98,7 @@ public class ServiceManagementService {
 
         return this.serviceRepository.findAll()
                 .stream()
+                .filter(service -> service.getActive() == true)
                 .map(service ->
                         new ResponseServicesForCreatedUser(
                                 service.getServiceManagementId(),
