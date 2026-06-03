@@ -66,6 +66,7 @@ public class UserService {
                 entity.getUsername(),
                 entity.getName(),
                 entity.getSurname(),
+                entity.getPhone(),
                 entity.getEmail(),
                 entity.getRole().name(),
                 entity.getCounterNumber(),
@@ -88,6 +89,7 @@ public class UserService {
         entity.setUsername(dto.username());
         entity.setName(dto.name());
         entity.setSurname(dto.surname());
+        entity.setPhone(dto.phone());
         entity.setEmail(dto.email());
         entity.setRole(Role.valueOf(dto.role()));
         entity.setCounterNumber(dto.counterNumber());
@@ -106,6 +108,7 @@ public class UserService {
                 entity.getUsername(),
                 entity.getName(),
                 entity.getSurname(),
+                entity.getPhone(),
                 entity.getEmail(),
                 entity.getRole().name(),
                 entity.getCounterNumber(),
@@ -135,6 +138,7 @@ public class UserService {
                 entity.getUsername(),
                 entity.getName(),
                 entity.getSurname(),
+                entity.getPhone(),
                 entity.getEmail(),
                 entity.getRole().name(),
                 entity.getCounterNumber(),
@@ -156,6 +160,7 @@ public class UserService {
                 entity.getName(),
                 entity.getSurname(),
                 entity.getEmail(),
+                entity.getPhone(),
                 entity.getRole().name(),
                 entity.getCounterNumber(),
                 entity.getActive(),
