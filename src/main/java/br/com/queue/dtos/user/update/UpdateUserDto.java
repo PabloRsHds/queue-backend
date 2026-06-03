@@ -8,6 +8,7 @@ public record UpdateUserDto(
         String username,
         String name,
         String surname,
+        String phone,
         String email,
         String password,
         String role,

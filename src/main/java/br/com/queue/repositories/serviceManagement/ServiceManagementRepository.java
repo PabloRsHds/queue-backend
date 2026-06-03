@@ -19,13 +19,8 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
 
     Optional<ServiceManagement> findByServiceManagementId(String serviceManagementId);
 
-    @Query(value = """
-            SELECT *
-            FROM tb_service_management s
-            WHERE s.service_management_id IN :serviceManagementIds
-        """, nativeQuery = true)
     Set<ServiceManagement> findAllByServiceManagementIdIn(
-            @Param("serviceManagementIds") Set<String> serviceManagementIds);
+            Set<String> serviceManagementIds);
 
     @Query(value = """
         SELECT

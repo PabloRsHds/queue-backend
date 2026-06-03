@@ -6,6 +6,7 @@ public record ResponseUserDto(
         String username,
         String name,
         String surname,
+        String phone,
         String email,
         String role,
         Integer counterNumber,
