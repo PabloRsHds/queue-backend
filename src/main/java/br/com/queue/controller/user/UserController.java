@@ -3,6 +3,7 @@ package br.com.queue.controller.user;
 import br.com.queue.dtos.statistics.ResponseUserStatisticsDto;
 import br.com.queue.dtos.user.ResponseUserDto;
 import br.com.queue.dtos.user.create.CreateUserDto;
+import br.com.queue.dtos.user.get_user.ResponseUserInfoDto;
 import br.com.queue.dtos.user.update.UpdateUserDto;
 import br.com.queue.dtos.user.users.ResponseAllUsersDto;
 import br.com.queue.service.user.UserService;
@@ -49,7 +50,7 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<ResponseUserDto> getUserById(
+    public ResponseEntity<ResponseUserInfoDto> getUserById(
             @PathVariable String userId
     ) {
 

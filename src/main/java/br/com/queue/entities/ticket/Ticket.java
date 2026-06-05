@@ -8,12 +8,15 @@ import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.enums.PriorityLevel;
 import br.com.queue.enums.TicketStatus;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "tb_tickets")
 public class Ticket {
 

@@ -3,14 +3,17 @@ package br.com.queue.entities.customer;
 import br.com.queue.entities.schedule.Schedule;
 import br.com.queue.entities.ticket.Ticket;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "tb_customers")
 public class Customer {
 

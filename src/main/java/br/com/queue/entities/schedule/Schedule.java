@@ -5,12 +5,15 @@ import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.entities.customer.Customer;
 import br.com.queue.enums.ScheduleStatus;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "tb_schedules")
 public class Schedule {
 

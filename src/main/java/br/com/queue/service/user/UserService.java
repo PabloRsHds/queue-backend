@@ -3,6 +3,7 @@ package br.com.queue.service.user;
 import br.com.queue.dtos.statistics.ResponseUserStatisticsDto;
 import br.com.queue.dtos.user.ResponseUserDto;
 import br.com.queue.dtos.user.create.CreateUserDto;
+import br.com.queue.dtos.user.get_user.ResponseUserInfoDto;
 import br.com.queue.dtos.user.update.UpdateUserDto;
 import br.com.queue.dtos.user.users.ResponseAllUsersDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
@@ -22,6 +23,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,9 +36,8 @@ public class UserService {
     @Transactional
     public ResponseUserDto createUser(CreateUserDto dto) {
 
-        Set<ServiceManagement> services = new HashSet<>(
-                this.serviceManagementRepository.findAllByServiceManagementIdIn(dto.serviceIds())
-        );
+        Set<ServiceManagement> services =
+                serviceManagementRepository.findAllByServiceManagementIdIn(dto.serviceIds());
 
         var entity = new User();
         entity.setUsername(dto.username());
@@ -128,12 +129,20 @@ public class UserService {
                 PageRequest.of(page, size));
     }
 
-    public ResponseUserDto getUserById(String userId) {
+    public ResponseUserInfoDto getUserById(String userId) {
 
         var entity = this.userRepository.findByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
 
-        return new ResponseUserDto(
+        var updateAt = "";
+
+        if (entity.getUpdatedAt() != null ) {
+            updateAt = entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } else {
+            updateAt = null;
+        }
+
+        return new ResponseUserInfoDto(
                 entity.getUserId(),
                 entity.getUsername(),
                 entity.getName(),
@@ -144,7 +153,11 @@ public class UserService {
                 entity.getCounterNumber(),
                 entity.getActive(),
                 entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
-                entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                updateAt,
+                entity.getServices()
+                        .stream()
+                        .map(ServiceManagement::getName)
+                        .collect(Collectors.toSet())
         );
     }
 
@@ -153,6 +166,14 @@ public class UserService {
 
         var entity = this.userRepository.findByUserId(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
+
+        var updateAt = "";
+
+        if (entity.getUpdatedAt() != null ) {
+            updateAt = entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } else {
+            updateAt = null;
+        }
 
         var response = new ResponseUserDto(
                 entity.getUserId(),
@@ -165,7 +186,7 @@ public class UserService {
                 entity.getCounterNumber(),
                 entity.getActive(),
                 entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
-                entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                updateAt
         );
 
         this.userRepository.delete(entity);

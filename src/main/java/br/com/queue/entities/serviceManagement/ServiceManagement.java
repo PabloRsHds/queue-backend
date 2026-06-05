@@ -5,7 +5,7 @@ import br.com.queue.entities.user.User;
 import br.com.queue.entities.department.Department;
 import br.com.queue.entities.schedule.Schedule;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -15,7 +15,10 @@ import java.util.List;
 import java.util.Set;
 
 @Entity
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "tb_service_management")
 public class ServiceManagement {
 

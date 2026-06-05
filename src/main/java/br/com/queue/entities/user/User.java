@@ -3,14 +3,17 @@ package br.com.queue.entities.user;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.enums.Role;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "tb_users")
 public class User {
 
