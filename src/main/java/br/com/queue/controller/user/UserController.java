@@ -29,7 +29,7 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PutMapping
+    @PatchMapping
     public ResponseEntity<ResponseUserDto> update(
             @RequestBody UpdateUserDto dto
     ) {

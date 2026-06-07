@@ -93,10 +93,15 @@ public class UserService {
         entity.setPhone(dto.phone());
         entity.setEmail(dto.email());
         entity.setRole(Role.valueOf(dto.role()));
-        entity.setCounterNumber(dto.counterNumber());
         entity.setActive(dto.active());
         entity.setServices(services);
         entity.setUpdatedAt(LocalDateTime.now());
+
+        if (!dto.role().equals("ATTENDANT")) {
+            entity.setCounterNumber(null);
+        } else {
+            entity.setCounterNumber(dto.counterNumber());
+        }
 
         if (dto.password() != null && !dto.password().isBlank()) {
             entity.setPassword(passwordEncoder.encode(dto.password()));
