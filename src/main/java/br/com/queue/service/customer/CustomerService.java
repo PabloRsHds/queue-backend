@@ -3,9 +3,12 @@ package br.com.queue.service.customer;
 import br.com.queue.dtos.customer.allCustomer.ResponseAllCustomersDto;
 import br.com.queue.dtos.customer.create.CreateCustomerDto;
 import br.com.queue.dtos.customer.create.ResponseCustomerDto;
+import br.com.queue.dtos.customer.getCustomer.ResponseCustomerById;
 import br.com.queue.dtos.customer.update.ResponseUpdateCustomerDto;
 import br.com.queue.dtos.customer.update.UpdateCustomerDto;
+import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.customer.Customer;
+import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.repositories.customer.CustomerRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
@@ -72,31 +76,55 @@ public class CustomerService {
         );
     }
 
-    public Page<ResponseAllCustomersDto> getAllCustomers(int page, int size) {
+    public Page<ResponseAllCustomersDto> getAllCustomers(int page, int size, String search) {
 
-        return this.customerRepository.findAll(PageRequest.of(page, size))
-                .map(customer -> new ResponseAllCustomersDto(
-                        customer.getName(),
-                        customer.getCpf(),
-                        customer.getRg(),
-                        customer.getPhone(),
-                        customer.getEmail(),
-                        customer.getCreatedAt()
-                ));
+        String normalizedSearch = (search == null || search.isBlank())
+                ? null
+                : search.trim();
+
+        return this.customerRepository.findAllWithSearch(normalizedSearch,
+                PageRequest.of(page, size));
     }
 
-    public ResponseCustomerDto getCustomerById(String customerId) {
+    public ResponseStatisticsDto getStatistics() {
+        return this.customerRepository.getStatistics();
+    }
 
-        Customer customer = this.customerRepository.findByCustomerId(customerId)
+    public ResponseCustomerById getCustomerById(String customerId) {
+
+        var customer = this.customerRepository.findByCustomerId(customerId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
 
-        return new ResponseCustomerDto(
+        var updateAt = "";
+
+        if (customer.getUpdatedAt() != null ) {
+            updateAt = customer.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } else {
+            updateAt = null;
+        }
+
+        var ticketCode = "";
+
+        if (customer.getTickets().getFirst().getCode().isBlank()) {
+            ticketCode = null;
+        } else {
+            ticketCode = customer.getTickets()
+                            .stream()
+                            .findFirst()
+                            .map(Ticket::getCode)
+                            .orElseThrow();
+        }
+
+        return new ResponseCustomerById(
+                customer.getCustomerId(),
                 customer.getName(),
                 customer.getCpf(),
                 customer.getRg(),
                 customer.getPhone(),
                 customer.getEmail(),
-                customer.getCreatedAt()
+                customer.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                updateAt,
+                ticketCode
         );
     }
 

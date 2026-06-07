@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
-public class ScheduleService {
+public class SchedulingService {
 
     private final ScheduleRepository scheduleRepository;
     private final CustomerRepository customerRepository;

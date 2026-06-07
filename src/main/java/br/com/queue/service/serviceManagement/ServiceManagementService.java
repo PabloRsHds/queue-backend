@@ -157,7 +157,6 @@ public class ServiceManagementService {
     }
 
     public ResponseStatisticsDto getStatistics() {
-
         return this.serviceRepository.getStatistics();
     }
 }
