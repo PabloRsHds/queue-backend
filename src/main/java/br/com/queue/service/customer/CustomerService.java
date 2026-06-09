@@ -27,7 +27,7 @@ public class CustomerService {
     private final CustomerRepository customerRepository;
 
     @Transactional
-    public ResponseCustomerDto createCustomer(CreateCustomerDto dto) {
+    public ResponseCustomerDto registerCustomer(CreateCustomerDto dto) {
 
         var entity = new Customer();
 
@@ -40,18 +40,28 @@ public class CustomerService {
 
         this.customerRepository.save(entity);
 
+        var updateAt = "";
+
+        if (entity.getUpdatedAt() != null ) {
+            updateAt = entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } else {
+            updateAt = null;
+        }
+
         return new ResponseCustomerDto(
+                entity.getCustomerId(),
                 entity.getName(),
                 entity.getCpf(),
                 entity.getRg(),
                 entity.getPhone(),
                 entity.getEmail(),
-                entity.getCreatedAt()
+                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                updateAt
         );
     }
 
     @Transactional
-    public ResponseUpdateCustomerDto updateCustomer(UpdateCustomerDto dto) {
+    public ResponseCustomerDto updateCustomer(UpdateCustomerDto dto) {
 
         Customer customer = this.customerRepository.findByCustomerId(dto.customerId())
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
@@ -65,14 +75,15 @@ public class CustomerService {
 
         this.customerRepository.save(customer);
 
-        return new ResponseUpdateCustomerDto(
+        return new ResponseCustomerDto(
                 customer.getCustomerId(),
                 customer.getName(),
                 customer.getCpf(),
                 customer.getRg(),
                 customer.getPhone(),
                 customer.getEmail(),
-                customer.getUpdatedAt()
+                customer.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                customer.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
         );
     }
 
@@ -120,11 +131,31 @@ public class CustomerService {
     }
 
     @Transactional
-    public void deleteCustomer(String customerId) {
+    public ResponseCustomerDto deleteCustomer(String customerId) {
 
-        Customer customer = this.customerRepository.findByCustomerId(customerId)
+        var entity = this.customerRepository.findByCustomerId(customerId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
 
-        this.customerRepository.delete(customer);
+        var updateAt = "";
+
+        if (entity.getUpdatedAt() != null ) {
+            updateAt = entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } else {
+            updateAt = null;
+        }
+
+        var response = new ResponseCustomerDto(
+                entity.getCustomerId(),
+                entity.getName(),
+                entity.getCpf(),
+                entity.getRg(),
+                entity.getPhone(),
+                entity.getEmail(),
+                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                updateAt
+        );
+
+        this.customerRepository.delete(entity);
+        return response;
     }
 }

@@ -24,12 +24,12 @@ public class CustomerController {
     @PostMapping
     public ResponseEntity<ResponseCustomerDto> createCustomer(@RequestBody CreateCustomerDto dto) {
 
-        var response = this.customerService.createCustomer(dto);
+        var response = this.customerService.registerCustomer(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PutMapping
-    public ResponseEntity<ResponseUpdateCustomerDto> updateCustomer(@RequestBody UpdateCustomerDto dto) {
+    @PatchMapping
+    public ResponseEntity<ResponseCustomerDto> updateCustomer(@RequestBody UpdateCustomerDto dto) {
 
         var response = this.customerService.updateCustomer(dto);
         return ResponseEntity.ok(response);
@@ -54,10 +54,10 @@ public class CustomerController {
     }
 
     @DeleteMapping("/{customerId}")
-    public ResponseEntity<Void> deleteCustomer(@PathVariable String customerId) {
+    public ResponseEntity<ResponseCustomerDto> deleteCustomer(@PathVariable String customerId) {
 
-        this.customerService.deleteCustomer(customerId);
-        return ResponseEntity.noContent().build();
+        var response = this.customerService.deleteCustomer(customerId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
     }
 
     @GetMapping("/statistics")
