@@ -95,25 +95,16 @@ public class CustomerService {
         var customer = this.customerRepository.findByCustomerId(customerId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
 
-        var updateAt = "";
+        String updateAt = customer.getUpdatedAt() != null
+                ? customer.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                : null;
 
-        if (customer.getUpdatedAt() != null ) {
-            updateAt = customer.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-        } else {
-            updateAt = null;
-        }
-
-        var ticketCode = "";
-
-        if (customer.getTickets().getFirst().getCode().isBlank()) {
-            ticketCode = null;
-        } else {
-            ticketCode = customer.getTickets()
-                            .stream()
-                            .findFirst()
-                            .map(Ticket::getCode)
-                            .orElseThrow();
-        }
+        String ticketCode = customer.getTickets()
+                .stream()
+                .findFirst()
+                .map(Ticket::getCode)
+                .filter(code -> !code.isBlank())
+                .orElse(null);
 
         return new ResponseCustomerById(
                 customer.getCustomerId(),

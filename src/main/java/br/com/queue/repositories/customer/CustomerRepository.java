@@ -20,6 +20,7 @@ public interface CustomerRepository extends JpaRepository<Customer, String> {
 
     @Query(value = """
         SELECT
+            c.customer_id AS customerId,
             c.name AS name,
             c.cpf AS cpf,
             c.rg AS rg,
