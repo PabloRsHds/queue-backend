@@ -4,9 +4,7 @@ import br.com.queue.dtos.customer.allCustomer.ResponseAllCustomersDto;
 import br.com.queue.dtos.customer.create.CreateCustomerDto;
 import br.com.queue.dtos.customer.create.ResponseCustomerDto;
 import br.com.queue.dtos.customer.getCustomer.ResponseCustomerById;
-import br.com.queue.dtos.customer.update.ResponseUpdateCustomerDto;
 import br.com.queue.dtos.customer.update.UpdateCustomerDto;
-import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.customer.Customer;
 import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.repositories.customer.CustomerRepository;
@@ -95,10 +93,6 @@ public class CustomerService {
 
         return this.customerRepository.findAllWithSearch(normalizedSearch,
                 PageRequest.of(page, size));
-    }
-
-    public ResponseStatisticsDto getStatistics() {
-        return this.customerRepository.getStatistics();
     }
 
     public ResponseCustomerById getCustomerById(String customerId) {

@@ -1,7 +1,6 @@
 package br.com.queue.repositories.customer;
 
 import br.com.queue.dtos.customer.allCustomer.ResponseAllCustomersDto;
-import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.customer.Customer;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
 import java.util.Optional;
 
 public interface CustomerRepository extends JpaRepository<Customer, String> {
@@ -64,12 +64,4 @@ public interface CustomerRepository extends JpaRepository<Customer, String> {
             nativeQuery = true
     )
     Page<ResponseAllCustomersDto> findAllWithSearch(@Param("search") String search, Pageable pageable);
-
-    @Query(value = """
-            SELECT
-                COUNT(*) AS totalElements
-            FROM tb_customers
-            """,
-            nativeQuery = true)
-    ResponseStatisticsDto getStatistics();
 }

@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/schedule")
+@RequestMapping("/scheduling")
 @RequiredArgsConstructor
 public class ScheduleController {
 
@@ -36,10 +36,11 @@ public class ScheduleController {
     @GetMapping
     public ResponseEntity<Page<ResponseAllSchedulesDto>> getAllSchedules(
             @RequestParam int page,
-            @RequestParam int size
+            @RequestParam int size,
+            @RequestParam(required = false) String search
     ) {
 
-        var response = this.schedulingService.getAllSchedules(page, size);
+        var response = this.schedulingService.getAllSchedules(page, size, search);
         return ResponseEntity.ok(response);
     }
 

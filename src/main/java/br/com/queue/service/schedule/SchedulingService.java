@@ -84,18 +84,16 @@ public class SchedulingService {
         );
     }
 
-    public Page<ResponseAllSchedulesDto> getAllSchedules(int page, int size) {
+    public Page<ResponseAllSchedulesDto> getAllSchedules(int page, int size, String search) {
 
-        return this.scheduleRepository.findAll(PageRequest.of(page, size))
-                .map(schedule -> new ResponseAllSchedulesDto(
-                        schedule.getScheduleId(),
-                        schedule.getCustomer().getCustomerId(),
-                        schedule.getCustomer().getName(),
-                        schedule.getServiceManagement().getServiceManagementId(),
-                        schedule.getServiceManagement().getName(),
-                        schedule.getScheduledDate(),
-                        schedule.getStatus().name()
-                ));
+        String normalizedSearch = (search == null || search.isBlank())
+                ? null
+                : search.trim();
+
+        return this.scheduleRepository.findAllWithSearch(
+                normalizedSearch,
+                PageRequest.of(page, size)
+        );
     }
 
     public ResponseScheduleDto getScheduleById(String scheduleId) {
