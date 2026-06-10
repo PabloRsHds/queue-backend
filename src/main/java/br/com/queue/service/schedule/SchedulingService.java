@@ -1,8 +1,8 @@
 package br.com.queue.service.schedule;
 
+import br.com.queue.dtos.schedule.allSchedules.ResponseAllSchedulesDto;
 import br.com.queue.dtos.schedule.create.CreateScheduleDto;
 import br.com.queue.dtos.schedule.create.ResponseScheduleDto;
-import br.com.queue.dtos.schedule.allSchedules.ResponseAllSchedulesDto;
 import br.com.queue.dtos.schedule.update.ResponseUpdateScheduleDto;
 import br.com.queue.dtos.schedule.update.UpdateScheduleDto;
 import br.com.queue.entities.schedule.Schedule;
@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Service
@@ -41,7 +42,7 @@ public class SchedulingService {
 
         entity.setCustomer(customer);
         entity.setServiceManagement(service);
-        entity.setScheduledDate(LocalDateTime.now());
+        entity.setScheduledDate(dto.scheduledDate());
         entity.setStatus(ScheduleStatus.SCHEDULED);
         entity.setNotes(dto.notes());
         entity.setCreatedAt(LocalDateTime.now());
@@ -84,7 +85,7 @@ public class SchedulingService {
         );
     }
 
-    public Page<ResponseAllSchedulesDto> getAllSchedules(int page, int size, String search) {
+    public Page<ResponseAllSchedulesDto> getAllSchedules(int page, int size, String search, LocalDate scheduleDate) {
 
         String normalizedSearch = (search == null || search.isBlank())
                 ? null
@@ -92,6 +93,7 @@ public class SchedulingService {
 
         return this.scheduleRepository.findAllWithSearch(
                 normalizedSearch,
+                scheduleDate,
                 PageRequest.of(page, size)
         );
     }

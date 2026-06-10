@@ -12,6 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 @RestController
 @RequestMapping("/scheduling")
 @RequiredArgsConstructor
@@ -37,10 +40,11 @@ public class ScheduleController {
     public ResponseEntity<Page<ResponseAllSchedulesDto>> getAllSchedules(
             @RequestParam int page,
             @RequestParam int size,
+            @RequestParam(required = false) LocalDate scheduleDate,
             @RequestParam(required = false) String search
     ) {
 
-        var response = this.schedulingService.getAllSchedules(page, size, search);
+        var response = this.schedulingService.getAllSchedules(page, size, search, scheduleDate);
         return ResponseEntity.ok(response);
     }
 

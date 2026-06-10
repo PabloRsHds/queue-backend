@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 public interface ScheduleRepository extends JpaRepository<Schedule, String> {
@@ -35,8 +36,10 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
             LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
         OR UNACCENT(LOWER(sm.name))
             LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
-        OR TO_CHAR(s.scheduled_date, 'DD/MM/YYYY HH24:MI')
-            LIKE CONCAT('%', :search, '%')
+    )
+    AND (
+        CAST(:scheduleDate AS DATE) IS NULL
+        OR DATE(s.scheduled_date) = CAST(:scheduleDate AS DATE)
     )
     ORDER BY COALESCE(s.updated_at, s.created_at) DESC
     """,
@@ -54,11 +57,15 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
             LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
         OR UNACCENT(LOWER(sm.name))
             LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
-        OR TO_CHAR(s.scheduled_date, 'DD/MM/YYYY HH24:MI')
-            LIKE CONCAT('%', :search, '%')
+    )
+    AND (
+        CAST(:scheduleDate AS DATE) IS NULL
+        OR DATE(s.scheduled_date) = CAST(:scheduleDate AS DATE)
     )
     """,
             nativeQuery = true
     )
-    Page<ResponseAllSchedulesDto> findAllWithSearch(@Param("search") String search, Pageable pageable);
+    Page<ResponseAllSchedulesDto> findAllWithSearch(@Param("search") String search,
+                                                    @Param("scheduleDate") LocalDate scheduleDate,
+                                                    Pageable pageable);
 }

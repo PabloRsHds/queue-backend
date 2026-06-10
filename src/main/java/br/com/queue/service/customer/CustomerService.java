@@ -98,7 +98,7 @@ public class CustomerService {
     public ResponseCustomerById getCustomerById(String customerId) {
 
         var customer = this.customerRepository.findByCustomerId(customerId)
-                .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado"));
+                .orElseThrow();
 
         String updateAt = customer.getUpdatedAt() != null
                 ? customer.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
