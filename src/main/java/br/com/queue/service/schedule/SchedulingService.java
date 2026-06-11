@@ -44,7 +44,7 @@ public class SchedulingService {
         entity.setServiceManagement(service);
         entity.setScheduledDate(dto.scheduledDate());
         entity.setStatus(ScheduleStatus.SCHEDULED);
-        entity.setNotes(dto.notes());
+        entity.setNote(dto.note());
         entity.setCreatedAt(LocalDateTime.now());
 
         this.scheduleRepository.save(entity);
@@ -57,7 +57,7 @@ public class SchedulingService {
                 entity.getServiceManagement().getName(),
                 entity.getScheduledDate(),
                 entity.getStatus().name(),
-                entity.getNotes(),
+                entity.getNote(),
                 entity.getCreatedAt()
         );
     }
@@ -79,7 +79,7 @@ public class SchedulingService {
                 schedule.getServiceManagement().getName(),
                 schedule.getScheduledDate(),
                 schedule.getStatus().name(),
-                schedule.getNotes(),
+                schedule.getNote(),
                 schedule.getCreatedAt(),
                 schedule.getUpdatedAt()
         );
@@ -111,7 +111,7 @@ public class SchedulingService {
                 schedule.getServiceManagement().getName(),
                 schedule.getScheduledDate(),
                 schedule.getStatus().name(),
-                schedule.getNotes(),
+                schedule.getNote(),
                 schedule.getCreatedAt()
         );
     }

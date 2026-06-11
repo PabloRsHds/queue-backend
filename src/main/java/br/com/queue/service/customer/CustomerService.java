@@ -4,6 +4,7 @@ import br.com.queue.dtos.customer.allCustomer.ResponseAllCustomersDto;
 import br.com.queue.dtos.customer.create.CreateCustomerDto;
 import br.com.queue.dtos.customer.create.ResponseCustomerDto;
 import br.com.queue.dtos.customer.getCustomer.ResponseCustomerById;
+import br.com.queue.dtos.customer.getCustomer.ResponseGetCustomerIdsAndNames;
 import br.com.queue.dtos.customer.update.UpdateCustomerDto;
 import br.com.queue.entities.customer.Customer;
 import br.com.queue.entities.ticket.Ticket;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -93,6 +95,15 @@ public class CustomerService {
 
         return this.customerRepository.findAllWithSearch(normalizedSearch,
                 PageRequest.of(page, size));
+    }
+
+    public List<ResponseGetCustomerIdsAndNames> getCustomerIdsAndNames() {
+
+        return this.customerRepository.findAll()
+                .stream()
+                .map(customer ->
+                        new ResponseGetCustomerIdsAndNames(customer.getCustomerId(), customer.getName()))
+                .toList();
     }
 
     public ResponseCustomerById getCustomerById(String customerId) {

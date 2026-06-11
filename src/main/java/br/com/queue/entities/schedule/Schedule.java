@@ -37,7 +37,7 @@ public class Schedule {
     @Column(nullable = false)
     private ScheduleStatus status;
 
-    private String notes;
+    private String note;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

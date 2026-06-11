@@ -4,6 +4,7 @@ import br.com.queue.dtos.customer.allCustomer.ResponseAllCustomersDto;
 import br.com.queue.dtos.customer.create.CreateCustomerDto;
 import br.com.queue.dtos.customer.create.ResponseCustomerDto;
 import br.com.queue.dtos.customer.getCustomer.ResponseCustomerById;
+import br.com.queue.dtos.customer.getCustomer.ResponseGetCustomerIdsAndNames;
 import br.com.queue.dtos.customer.update.UpdateCustomerDto;
 import br.com.queue.service.customer.CustomerService;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/customers")
@@ -41,6 +44,13 @@ public class CustomerController {
     ) {
 
         var response = this.customerService.getAllCustomers(page, size, search);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/ids-and-names")
+    public ResponseEntity<List<ResponseGetCustomerIdsAndNames>> getCustomerIdsAndNames() {
+
+        var response = this.customerService.getCustomerIdsAndNames();
         return ResponseEntity.ok(response);
     }
 
