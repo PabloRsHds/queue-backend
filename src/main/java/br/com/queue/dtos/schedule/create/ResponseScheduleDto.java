@@ -11,7 +11,7 @@ public record ResponseScheduleDto(
         String serviceManagementName,
         LocalDateTime scheduledDate,
         String status,
-        String notes,
+        String note,
         LocalDateTime createdAt
 ) {
 }

@@ -56,9 +56,9 @@ public class ScheduleController {
     }
 
     @DeleteMapping("/{scheduleId}")
-    public ResponseEntity<Void> deleteSchedule(@PathVariable String scheduleId) {
+    public ResponseEntity<ResponseScheduleDto> deleteSchedule(@PathVariable String scheduleId) {
 
-        this.schedulingService.deleteSchedule(scheduleId);
-        return ResponseEntity.noContent().build();
+        var response = this.schedulingService.deleteSchedule(scheduleId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
     }
 }

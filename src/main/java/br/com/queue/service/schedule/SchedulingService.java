@@ -117,11 +117,25 @@ public class SchedulingService {
     }
 
     @Transactional
-    public void deleteSchedule(String scheduleId) {
+    public ResponseScheduleDto deleteSchedule(String scheduleId) {
 
-        var schedule = this.scheduleRepository.findByScheduleId(scheduleId)
+        var entity = this.scheduleRepository.findByScheduleId(scheduleId)
                 .orElseThrow(() -> new EntityNotFoundException("Schedule not found"));
 
-        this.scheduleRepository.delete(schedule);
+        var response = new ResponseScheduleDto(
+                entity.getScheduleId(),
+                entity.getCustomer().getCustomerId(),
+                entity.getCustomer().getName(),
+                entity.getServiceManagement().getServiceManagementId(),
+                entity.getServiceManagement().getName(),
+                entity.getScheduledDate(),
+                entity.getStatus().name(),
+                entity.getNote(),
+                entity.getCreatedAt()
+        );
+
+        this.scheduleRepository.delete(entity);
+
+        return response;
     }
 }
