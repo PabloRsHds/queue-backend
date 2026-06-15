@@ -9,7 +9,6 @@ import br.com.queue.dtos.ticket.finishTicket.FinishTicketDto;
 import br.com.queue.dtos.ticket.finishTicket.ResponseFinishTicketDto;
 import br.com.queue.dtos.ticket.startAttendance.ResponseStartAttendanceDto;
 import br.com.queue.dtos.ticket.startAttendance.StartAttendanceDto;
-import br.com.queue.entities.schedule.Schedule;
 import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.entities.user.User;
 import br.com.queue.enums.PriorityLevel;
@@ -27,6 +26,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Service
@@ -45,25 +45,37 @@ public class TicketService {
         var customer = this.customerRepository.findByCustomerId(dto.customerId())
                 .orElseThrow(() -> new EntityNotFoundException("Customer not found"));
 
-        var service = this.serviceManagementRepository
+        var serviceManagement = this.serviceManagementRepository
                 .findByServiceManagementId(dto.serviceManagementId())
                 .orElseThrow(() -> new EntityNotFoundException("Service not found"));
+
+        var schedule = this.scheduleRepository.findById(dto.scheduleId())
+                .orElseThrow(() -> new EntityNotFoundException("Schedule not found"));
 
         var entity = new Ticket();
 
         entity.setCode(generateCode());
         entity.setCustomer(customer);
-        entity.setServiceManagement(service);
+        entity.setServiceManagement(serviceManagement);
         entity.setPriority(PriorityLevel.valueOf(dto.priority()));
         entity.setStatus(TicketStatus.WAITING);
         entity.setCreatedAt(LocalDateTime.now());
+        entity.setSchedule(schedule);
 
-        if (dto.scheduleId() != null) {
+        var calledAt = "";
+        var startedAt = "";
+        var finishedAt = "";
 
-            Schedule schedule = this.scheduleRepository.findById(dto.scheduleId())
-                    .orElseThrow(() -> new EntityNotFoundException("Schedule not found"));
+        if (entity.getCalledAt() != null) {
+            calledAt = entity.getCalledAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        }
 
-            entity.setSchedule(schedule);
+        if (entity.getStartedAt() != null) {
+            startedAt = entity.getStartedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        }
+
+        if (entity.getFinishedAt() != null) {
+            finishedAt = entity.getFinishedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
         }
 
         this.ticketRepository.save(entity);
@@ -77,10 +89,10 @@ public class TicketService {
                 entity.getServiceManagement().getName(),
                 entity.getPriority().name(),
                 entity.getStatus().name(),
-                entity.getCreatedAt(),
-                entity.getCalledAt(),
-                entity.getStartedAt(),
-                entity.getFinishedAt()
+                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                calledAt,
+                startedAt,
+                finishedAt
         );
     }
 
@@ -185,22 +197,38 @@ public class TicketService {
 
     public ResponseTicketDto getTicketById(String ticketId) {
 
-        Ticket ticket = this.ticketRepository.findById(ticketId)
+        var entity = this.ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
 
+        var calledAt = "";
+        var startedAt = "";
+        var finishedAt = "";
+
+        if (entity.getCalledAt() != null) {
+            calledAt = entity.getCalledAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        }
+
+        if (entity.getStartedAt() != null) {
+            startedAt = entity.getStartedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        }
+
+        if (entity.getFinishedAt() != null) {
+            finishedAt = entity.getFinishedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        }
+
         return new ResponseTicketDto(
-                ticket.getTicketId(),
-                ticket.getCode(),
-                ticket.getCustomer().getCustomerId(),
-                ticket.getCustomer().getName(),
-                ticket.getServiceManagement().getServiceManagementId(),
-                ticket.getServiceManagement().getName(),
-                ticket.getPriority().name(),
-                ticket.getStatus().name(),
-                ticket.getCreatedAt(),
-                ticket.getCalledAt(),
-                ticket.getStartedAt(),
-                ticket.getFinishedAt()
+                entity.getTicketId(),
+                entity.getCode(),
+                entity.getCustomer().getCustomerId(),
+                entity.getCustomer().getName(),
+                entity.getServiceManagement().getServiceManagementId(),
+                entity.getServiceManagement().getName(),
+                entity.getPriority().name(),
+                entity.getStatus().name(),
+                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                calledAt,
+                startedAt,
+                finishedAt
         );
     }
 

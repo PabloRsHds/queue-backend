@@ -12,9 +12,9 @@ public record ResponseTicketDto(
         String serviceManagementName,
         String priority,
         String status,
-        LocalDateTime createdAt,
-        LocalDateTime calledAt,
-        LocalDateTime startedAt,
-        LocalDateTime finishedAt
+        String createdAt,
+        String calledAt,
+        String startedAt,
+        String finishedAt
 ) {
 }
