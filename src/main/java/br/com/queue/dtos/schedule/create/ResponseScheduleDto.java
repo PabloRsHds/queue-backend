@@ -12,6 +12,7 @@ public record ResponseScheduleDto(
         LocalDateTime scheduledDate,
         String status,
         String note,
-        LocalDateTime createdAt
+        String createdAt,
+        String updateAt
 ) {
 }

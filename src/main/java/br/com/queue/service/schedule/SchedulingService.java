@@ -3,7 +3,6 @@ package br.com.queue.service.schedule;
 import br.com.queue.dtos.schedule.allSchedules.ResponseAllSchedulesDto;
 import br.com.queue.dtos.schedule.create.CreateScheduleDto;
 import br.com.queue.dtos.schedule.create.ResponseScheduleDto;
-import br.com.queue.dtos.schedule.update.ResponseUpdateScheduleDto;
 import br.com.queue.dtos.schedule.update.UpdateScheduleDto;
 import br.com.queue.entities.schedule.Schedule;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
@@ -20,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
@@ -49,6 +49,14 @@ public class SchedulingService {
 
         this.scheduleRepository.save(entity);
 
+        var updateAt = "";
+
+        if (entity.getUpdatedAt() != null ) {
+            updateAt = entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } else {
+            updateAt = null;
+        }
+
         return new ResponseScheduleDto(
                 entity.getScheduleId(),
                 entity.getCustomer().getCustomerId(),
@@ -58,20 +66,48 @@ public class SchedulingService {
                 entity.getScheduledDate(),
                 entity.getStatus().name(),
                 entity.getNote(),
-                entity.getCreatedAt()
+                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                updateAt
         );
     }
 
     @Transactional
-    public ResponseUpdateScheduleDto updateSchedule(UpdateScheduleDto dto) {
+    public ResponseScheduleDto updateSchedule(UpdateScheduleDto dto) {
 
-        Schedule schedule = this.scheduleRepository.findById(dto.scheduleId())
+        var schedule = this.scheduleRepository.findById(dto.scheduleId())
                 .orElseThrow(() -> new EntityNotFoundException("Schedule not found"));
 
-        schedule.setStatus(ScheduleStatus.valueOf(dto.status()));
+        if (!dto.customerId().isBlank()) {
+            var customer = this.customerRepository
+                    .findByCustomerId(dto.customerId())
+                    .orElseThrow();
+
+            schedule.setCustomer(customer);
+        }
+
+        if (!dto.serviceManagementId().isBlank()) {
+            var serviceManagement = this.serviceManagementRepository
+                    .findByServiceManagementId(dto.serviceManagementId())
+                    .orElseThrow();
+            schedule.setServiceManagement(serviceManagement);
+        }
+
+        if (!dto.note().isBlank()) {
+            schedule.setNote(dto.note());
+        }
+
+        if (dto.scheduledDate() != null) {
+            schedule.setScheduledDate(dto.scheduledDate());
+        }
+
+        if (!dto.status().isBlank()) {
+            schedule.setStatus(ScheduleStatus.valueOf(dto.status()));
+        }
+
+        schedule.setUpdatedAt(LocalDateTime.now());
         this.scheduleRepository.save(schedule);
 
-        return new ResponseUpdateScheduleDto(
+        return new ResponseScheduleDto(
                 schedule.getScheduleId(),
                 schedule.getCustomer().getCustomerId(),
                 schedule.getCustomer().getName(),
@@ -80,8 +116,8 @@ public class SchedulingService {
                 schedule.getScheduledDate(),
                 schedule.getStatus().name(),
                 schedule.getNote(),
-                schedule.getCreatedAt(),
-                schedule.getUpdatedAt()
+                schedule.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                schedule.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
         );
     }
 
@@ -100,19 +136,28 @@ public class SchedulingService {
 
     public ResponseScheduleDto getScheduleById(String scheduleId) {
 
-        Schedule schedule = this.scheduleRepository.findByScheduleId(scheduleId)
+        var entity = this.scheduleRepository.findByScheduleId(scheduleId)
                 .orElseThrow(() -> new EntityNotFoundException("Schedule not found"));
 
+        var updateAt = "";
+
+        if (entity.getUpdatedAt() != null ) {
+            updateAt = entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } else {
+            updateAt = null;
+        }
+
         return new ResponseScheduleDto(
-                schedule.getScheduleId(),
-                schedule.getCustomer().getCustomerId(),
-                schedule.getCustomer().getName(),
-                schedule.getServiceManagement().getServiceManagementId(),
-                schedule.getServiceManagement().getName(),
-                schedule.getScheduledDate(),
-                schedule.getStatus().name(),
-                schedule.getNote(),
-                schedule.getCreatedAt()
+                entity.getScheduleId(),
+                entity.getCustomer().getCustomerId(),
+                entity.getCustomer().getName(),
+                entity.getServiceManagement().getServiceManagementId(),
+                entity.getServiceManagement().getName(),
+                entity.getScheduledDate(),
+                entity.getStatus().name(),
+                entity.getNote(),
+                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                updateAt
         );
     }
 
@@ -121,6 +166,14 @@ public class SchedulingService {
 
         var entity = this.scheduleRepository.findByScheduleId(scheduleId)
                 .orElseThrow(() -> new EntityNotFoundException("Schedule not found"));
+
+        var updateAt = "";
+
+        if (entity.getUpdatedAt() != null ) {
+            updateAt = entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } else {
+            updateAt = null;
+        }
 
         var response = new ResponseScheduleDto(
                 entity.getScheduleId(),
@@ -131,7 +184,8 @@ public class SchedulingService {
                 entity.getScheduledDate(),
                 entity.getStatus().name(),
                 entity.getNote(),
-                entity.getCreatedAt()
+                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                updateAt
         );
 
         this.scheduleRepository.delete(entity);

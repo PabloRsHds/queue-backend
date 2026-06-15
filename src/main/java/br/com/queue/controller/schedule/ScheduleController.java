@@ -3,7 +3,6 @@ package br.com.queue.controller.schedule;
 import br.com.queue.dtos.schedule.allSchedules.ResponseAllSchedulesDto;
 import br.com.queue.dtos.schedule.create.CreateScheduleDto;
 import br.com.queue.dtos.schedule.create.ResponseScheduleDto;
-import br.com.queue.dtos.schedule.update.ResponseUpdateScheduleDto;
 import br.com.queue.dtos.schedule.update.UpdateScheduleDto;
 import br.com.queue.service.schedule.SchedulingService;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/scheduling")
@@ -29,8 +27,8 @@ public class ScheduleController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PatchMapping("/status")
-    public ResponseEntity<ResponseUpdateScheduleDto> updateSchedule(@RequestBody UpdateScheduleDto dto) {
+    @PatchMapping()
+    public ResponseEntity<ResponseScheduleDto> updateSchedule(@RequestBody UpdateScheduleDto dto) {
 
         var response = this.schedulingService.updateSchedule(dto);
         return ResponseEntity.ok(response);
