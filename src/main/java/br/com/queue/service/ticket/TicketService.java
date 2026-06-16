@@ -9,6 +9,7 @@ import br.com.queue.dtos.ticket.finishTicket.FinishTicketDto;
 import br.com.queue.dtos.ticket.finishTicket.ResponseFinishTicketDto;
 import br.com.queue.dtos.ticket.startAttendance.ResponseStartAttendanceDto;
 import br.com.queue.dtos.ticket.startAttendance.StartAttendanceDto;
+import br.com.queue.entities.schedule.Schedule;
 import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.entities.user.User;
 import br.com.queue.enums.PriorityLevel;
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -42,6 +44,24 @@ public class TicketService {
     @Transactional
     public ResponseTicketDto createTicket(CreateTicketDto dto) {
 
+        var scheduleOpt = this.scheduleRepository.findById(dto.scheduleId());
+
+        if (scheduleOpt.isEmpty()) {
+            throw new EntityNotFoundException("Schedule not found");
+        }
+
+        var schedule = scheduleOpt.get();
+        // Verifica se já existe ticket para este schedule
+        var existingTicket = schedule.ge
+
+        if (scheduleOpt.get().getTicket().getTicketId() != null) {
+            // Atualiza ticket existente
+            existingTicket.setCreatedAt(LocalDateTime.now());
+            this.ticketRepository.save(existingTicket);
+            return buildResponseTicketDto(existingTicket);
+        }
+
+        // Cria novo ticket
         var customer = this.customerRepository.findByCustomerId(dto.customerId())
                 .orElseThrow(() -> new EntityNotFoundException("Customer not found"));
 
@@ -49,11 +69,7 @@ public class TicketService {
                 .findByServiceManagementId(dto.serviceManagementId())
                 .orElseThrow(() -> new EntityNotFoundException("Service not found"));
 
-        var schedule = this.scheduleRepository.findById(dto.scheduleId())
-                .orElseThrow(() -> new EntityNotFoundException("Schedule not found"));
-
         var entity = new Ticket();
-
         entity.setCode(generateCode());
         entity.setCustomer(customer);
         entity.setServiceManagement(serviceManagement);
@@ -62,6 +78,13 @@ public class TicketService {
         entity.setCreatedAt(LocalDateTime.now());
         entity.setSchedule(schedule);
 
+        this.ticketRepository.save(entity);
+
+        return buildResponseTicketDto(entity);
+    }
+
+    // Metodo auxiliar para não repetir código
+    private ResponseTicketDto buildResponseTicketDto(Ticket entity) {
         var calledAt = "";
         var startedAt = "";
         var finishedAt = "";
@@ -77,8 +100,6 @@ public class TicketService {
         if (entity.getFinishedAt() != null) {
             finishedAt = entity.getFinishedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
         }
-
-        this.ticketRepository.save(entity);
 
         return new ResponseTicketDto(
                 entity.getTicketId(),

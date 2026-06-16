@@ -9,6 +9,7 @@ public record ResponseScheduleDto(
         String customerName,
         String serviceManagementId,
         String serviceManagementName,
+        String ticketId,
         LocalDateTime scheduledDate,
         String status,
         String note,
