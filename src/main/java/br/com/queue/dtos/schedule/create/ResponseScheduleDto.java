@@ -10,9 +10,9 @@ public record ResponseScheduleDto(
         String serviceManagementId,
         String serviceManagementName,
         String ticketId,
+        String priority,
         LocalDateTime scheduledDate,
         String status,
-        String note,
         String createdAt,
         String updateAt
 ) {

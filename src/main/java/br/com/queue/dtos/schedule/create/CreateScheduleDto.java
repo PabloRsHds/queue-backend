@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 public record CreateScheduleDto(
         String customerId,
         String serviceManagementId,
-        String note,
+        String priority,
         LocalDateTime scheduledDate
 ) {
 }

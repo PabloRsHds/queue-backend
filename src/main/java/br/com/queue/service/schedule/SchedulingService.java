@@ -5,7 +5,7 @@ import br.com.queue.dtos.schedule.create.CreateScheduleDto;
 import br.com.queue.dtos.schedule.create.ResponseScheduleDto;
 import br.com.queue.dtos.schedule.update.UpdateScheduleDto;
 import br.com.queue.entities.schedule.Schedule;
-import br.com.queue.entities.serviceManagement.ServiceManagement;
+import br.com.queue.enums.PriorityLevel;
 import br.com.queue.enums.ScheduleStatus;
 import br.com.queue.repositories.customer.CustomerRepository;
 import br.com.queue.repositories.schedule.ScheduleRepository;
@@ -35,16 +35,16 @@ public class SchedulingService {
         var customer = this.customerRepository.findByCustomerId(dto.customerId())
                 .orElseThrow(() -> new EntityNotFoundException("Customer not found"));
 
-        ServiceManagement service = this.serviceManagementRepository.findById(dto.serviceManagementId())
+        var service = this.serviceManagementRepository.findById(dto.serviceManagementId())
                 .orElseThrow(() -> new EntityNotFoundException("Service not found"));
 
         var entity = new Schedule();
 
         entity.setCustomer(customer);
         entity.setServiceManagement(service);
+        entity.setPriority(PriorityLevel.valueOf(dto.priority()));
         entity.setScheduledDate(dto.scheduledDate());
         entity.setStatus(ScheduleStatus.SCHEDULED);
-        entity.setNote(dto.note());
         entity.setCreatedAt(LocalDateTime.now());
 
         this.scheduleRepository.save(entity);
@@ -57,16 +57,24 @@ public class SchedulingService {
             updateAt = null;
         }
 
+        var ticketId = "";
+
+        if (entity.getTicket() != null) {
+            ticketId = entity.getTicket().getTicketId();
+        } else {
+            ticketId = null;
+        }
+
         return new ResponseScheduleDto(
                 entity.getScheduleId(),
                 entity.getCustomer().getCustomerId(),
                 entity.getCustomer().getName(),
                 entity.getServiceManagement().getServiceManagementId(),
                 entity.getServiceManagement().getName(),
-                entity.getTicket().getTicketId(),
+                ticketId,
+                entity.getPriority().name(),
                 entity.getScheduledDate(),
                 entity.getStatus().name(),
-                entity.getNote(),
                 entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
                 updateAt
         );
@@ -93,8 +101,8 @@ public class SchedulingService {
             schedule.setServiceManagement(serviceManagement);
         }
 
-        if (!dto.note().isBlank()) {
-            schedule.setNote(dto.note());
+        if (dto.priority() != null) {
+            schedule.setPriority(PriorityLevel.valueOf(dto.priority()));
         }
 
         if (dto.scheduledDate() != null) {
@@ -103,6 +111,14 @@ public class SchedulingService {
 
         if (!dto.status().isBlank()) {
             schedule.setStatus(ScheduleStatus.valueOf(dto.status()));
+        }
+
+        var ticketId = "";
+
+        if (schedule.getTicket() != null) {
+            ticketId = schedule.getTicket().getTicketId();
+        } else {
+            ticketId = null;
         }
 
         schedule.setUpdatedAt(LocalDateTime.now());
@@ -114,10 +130,10 @@ public class SchedulingService {
                 schedule.getCustomer().getName(),
                 schedule.getServiceManagement().getServiceManagementId(),
                 schedule.getServiceManagement().getName(),
-                schedule.getTicket().getTicketId(),
+                ticketId,
+                schedule.getPriority().name(),
                 schedule.getScheduledDate(),
                 schedule.getStatus().name(),
-                schedule.getNote(),
                 schedule.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
                 schedule.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
         );
@@ -149,16 +165,24 @@ public class SchedulingService {
             updateAt = null;
         }
 
+        var ticketId = "";
+
+        if (entity.getTicket() != null) {
+            ticketId = entity.getTicket().getTicketId();
+        } else {
+            ticketId = null;
+        }
+
         return new ResponseScheduleDto(
                 entity.getScheduleId(),
                 entity.getCustomer().getCustomerId(),
                 entity.getCustomer().getName(),
                 entity.getServiceManagement().getServiceManagementId(),
                 entity.getServiceManagement().getName(),
-                entity.getTicket().getTicketId(),
+                ticketId,
+                entity.getPriority().name(),
                 entity.getScheduledDate(),
                 entity.getStatus().name(),
-                entity.getNote(),
                 entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
                 updateAt
         );
@@ -185,15 +209,14 @@ public class SchedulingService {
                 entity.getServiceManagement().getServiceManagementId(),
                 entity.getServiceManagement().getName(),
                 entity.getTicket().getTicketId(),
+                entity.getPriority().name(),
                 entity.getScheduledDate(),
                 entity.getStatus().name(),
-                entity.getNote(),
                 entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
                 updateAt
         );
 
         this.scheduleRepository.delete(entity);
-
         return response;
     }
 }

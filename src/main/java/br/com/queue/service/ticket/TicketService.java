@@ -9,7 +9,9 @@ import br.com.queue.dtos.ticket.finishTicket.FinishTicketDto;
 import br.com.queue.dtos.ticket.finishTicket.ResponseFinishTicketDto;
 import br.com.queue.dtos.ticket.startAttendance.ResponseStartAttendanceDto;
 import br.com.queue.dtos.ticket.startAttendance.StartAttendanceDto;
+import br.com.queue.entities.customer.Customer;
 import br.com.queue.entities.schedule.Schedule;
+import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.entities.user.User;
 import br.com.queue.enums.PriorityLevel;
@@ -44,30 +46,31 @@ public class TicketService {
     @Transactional
     public ResponseTicketDto createTicket(CreateTicketDto dto) {
 
-        var scheduleOpt = this.scheduleRepository.findById(dto.scheduleId());
+        Optional<Schedule> scheduleEntity = this.scheduleRepository.findById(dto.scheduleId());
+        Optional<Customer> customerEntity = this.customerRepository.findByCustomerId(dto.customerId());
+        Optional<ServiceManagement> serviceManagementEntity = this.serviceManagementRepository
+                .findByServiceManagementId(dto.serviceManagementId());
 
-        if (scheduleOpt.isEmpty()) {
-            throw new EntityNotFoundException("Schedule not found");
+        if (scheduleEntity.isEmpty()
+                || customerEntity.isEmpty()
+                || serviceManagementEntity.isEmpty()) {
+            throw new EntityNotFoundException("Dados não encontrados para dar prosseguimento a criação de ticket");
         }
 
-        var schedule = scheduleOpt.get();
-        // Verifica se já existe ticket para este schedule
-        var existingTicket = schedule.ge
+        var schedule = scheduleEntity.get();
+        var customer = customerEntity.get();
+        var serviceManagement = serviceManagementEntity.get();
 
-        if (scheduleOpt.get().getTicket().getTicketId() != null) {
-            // Atualiza ticket existente
-            existingTicket.setCreatedAt(LocalDateTime.now());
-            this.ticketRepository.save(existingTicket);
-            return buildResponseTicketDto(existingTicket);
+        Optional<Ticket> ticketEntity = this.ticketRepository
+                .findTicketByScheduleScheduleId(dto.scheduleId());
+
+        if (ticketEntity.isPresent()) {
+
+            var ticket = ticketEntity.get();
+            ticket.setCreatedAt(LocalDateTime.now());
+            this.ticketRepository.save(ticket);
+            return buildResponseTicketDto(ticket);
         }
-
-        // Cria novo ticket
-        var customer = this.customerRepository.findByCustomerId(dto.customerId())
-                .orElseThrow(() -> new EntityNotFoundException("Customer not found"));
-
-        var serviceManagement = this.serviceManagementRepository
-                .findByServiceManagementId(dto.serviceManagementId())
-                .orElseThrow(() -> new EntityNotFoundException("Service not found"));
 
         var entity = new Ticket();
         entity.setCode(generateCode());
@@ -221,36 +224,7 @@ public class TicketService {
         var entity = this.ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
 
-        var calledAt = "";
-        var startedAt = "";
-        var finishedAt = "";
-
-        if (entity.getCalledAt() != null) {
-            calledAt = entity.getCalledAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-        }
-
-        if (entity.getStartedAt() != null) {
-            startedAt = entity.getStartedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-        }
-
-        if (entity.getFinishedAt() != null) {
-            finishedAt = entity.getFinishedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-        }
-
-        return new ResponseTicketDto(
-                entity.getTicketId(),
-                entity.getCode(),
-                entity.getCustomer().getCustomerId(),
-                entity.getCustomer().getName(),
-                entity.getServiceManagement().getServiceManagementId(),
-                entity.getServiceManagement().getName(),
-                entity.getPriority().name(),
-                entity.getStatus().name(),
-                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
-                calledAt,
-                startedAt,
-                finishedAt
-        );
+        return buildResponseTicketDto(entity);
     }
 
     @Transactional

@@ -3,6 +3,7 @@ package br.com.queue.entities.schedule;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.entities.customer.Customer;
+import br.com.queue.enums.PriorityLevel;
 import br.com.queue.enums.ScheduleStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -37,7 +38,9 @@ public class Schedule {
     @Column(nullable = false)
     private ScheduleStatus status;
 
-    private String note;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PriorityLevel priority;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

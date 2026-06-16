@@ -6,7 +6,7 @@ public record UpdateScheduleDto(
         String scheduleId,
         String customerId,
         String serviceManagementId,
-        String note,
+        String priority,
         LocalDateTime scheduledDate,
         String status
 ) {

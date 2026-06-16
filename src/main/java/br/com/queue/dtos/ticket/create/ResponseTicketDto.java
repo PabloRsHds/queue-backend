@@ -1,7 +1,5 @@
 package br.com.queue.dtos.ticket.create;
 
-import java.time.LocalDateTime;
-
 public record ResponseTicketDto(
 
         String ticketId,
