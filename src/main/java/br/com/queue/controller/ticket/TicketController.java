@@ -2,12 +2,9 @@ package br.com.queue.controller.ticket;
 
 import br.com.queue.dtos.ticket.allTickets.ResponseAllTicketsDto;
 import br.com.queue.dtos.ticket.callTicket.CallTicketDto;
-import br.com.queue.dtos.ticket.callTicket.ResponseCallTicketDto;
 import br.com.queue.dtos.ticket.create.CreateTicketDto;
-import br.com.queue.dtos.ticket.create.ResponseTicketDto;
+import br.com.queue.dtos.ticket.ResponseTicketDto;
 import br.com.queue.dtos.ticket.finishTicket.FinishTicketDto;
-import br.com.queue.dtos.ticket.finishTicket.ResponseFinishTicketDto;
-import br.com.queue.dtos.ticket.startAttendance.ResponseStartAttendanceDto;
 import br.com.queue.dtos.ticket.startAttendance.StartAttendanceDto;
 import br.com.queue.service.ticket.TicketService;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +30,7 @@ public class TicketController {
     }
 
     @PatchMapping("/call")
-    public ResponseEntity<ResponseCallTicketDto> callTicket(
+    public ResponseEntity<ResponseTicketDto> callTicket(
             @RequestBody CallTicketDto dto
     ) {
 
@@ -42,7 +39,7 @@ public class TicketController {
     }
 
     @PatchMapping("/start")
-    public ResponseEntity<ResponseStartAttendanceDto> startAttendance(
+    public ResponseEntity<ResponseTicketDto> startAttendance(
             @RequestBody StartAttendanceDto dto
     ) {
 
@@ -51,7 +48,7 @@ public class TicketController {
     }
 
     @PatchMapping("/finish")
-    public ResponseEntity<ResponseFinishTicketDto> finishTicket(
+    public ResponseEntity<ResponseTicketDto> finishTicket(
             @RequestBody FinishTicketDto dto
     ) {
 
@@ -80,9 +77,9 @@ public class TicketController {
     }
 
     @DeleteMapping("/{ticketId}")
-    public ResponseEntity<Void> deleteTicket(@PathVariable String ticketId) {
+    public ResponseEntity<ResponseTicketDto> deleteTicket(@PathVariable String ticketId) {
 
-        this.ticketService.deleteTicket(ticketId);
-        return ResponseEntity.noContent().build();
+        var response = this.ticketService.deleteTicket(ticketId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
     }
 }

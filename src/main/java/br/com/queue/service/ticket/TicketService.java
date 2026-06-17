@@ -2,18 +2,14 @@ package br.com.queue.service.ticket;
 
 import br.com.queue.dtos.ticket.allTickets.ResponseAllTicketsDto;
 import br.com.queue.dtos.ticket.callTicket.CallTicketDto;
-import br.com.queue.dtos.ticket.callTicket.ResponseCallTicketDto;
 import br.com.queue.dtos.ticket.create.CreateTicketDto;
-import br.com.queue.dtos.ticket.create.ResponseTicketDto;
+import br.com.queue.dtos.ticket.ResponseTicketDto;
 import br.com.queue.dtos.ticket.finishTicket.FinishTicketDto;
-import br.com.queue.dtos.ticket.finishTicket.ResponseFinishTicketDto;
-import br.com.queue.dtos.ticket.startAttendance.ResponseStartAttendanceDto;
 import br.com.queue.dtos.ticket.startAttendance.StartAttendanceDto;
 import br.com.queue.entities.customer.Customer;
 import br.com.queue.entities.schedule.Schedule;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.entities.ticket.Ticket;
-import br.com.queue.entities.user.User;
 import br.com.queue.enums.PriorityLevel;
 import br.com.queue.enums.TicketStatus;
 import br.com.queue.repositories.customer.CustomerRepository;
@@ -86,6 +82,52 @@ public class TicketService {
         return buildResponseTicketDto(entity);
     }
 
+    @Transactional
+    public ResponseTicketDto callTicket(CallTicketDto dto) {
+
+        var entity = this.ticketRepository.findByTicketId(dto.ticketId())
+                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
+
+        entity.setStatus(TicketStatus.CALLED);
+        entity.setCalledAt(LocalDateTime.now());
+
+        this.ticketRepository.save(entity);
+
+        return this.buildResponseTicketDto(entity);
+    }
+
+    @Transactional
+    public ResponseTicketDto startAttendance(StartAttendanceDto dto) {
+
+        var entity = this.ticketRepository.findById(dto.ticketId())
+                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
+
+        var attendant = this.userRepository.findById(dto.attendantId())
+                .orElseThrow(() -> new EntityNotFoundException("Attendant not found"));
+
+        entity.setAttendant(attendant);
+        entity.setStatus(TicketStatus.IN_PROGRESS);
+        entity.setStartedAt(LocalDateTime.now());
+
+        this.ticketRepository.save(entity);
+
+        return this.buildResponseTicketDto(entity);
+    }
+
+    @Transactional
+    public ResponseTicketDto finishTicket(FinishTicketDto dto) {
+
+        var entity = this.ticketRepository.findById(dto.ticketId())
+                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
+
+        entity.setStatus(TicketStatus.valueOf(dto.status()));
+        entity.setFinishedAt(LocalDateTime.now());
+
+        this.ticketRepository.save(entity);
+
+        return this.buildResponseTicketDto(entity);
+    }
+
     // Metodo auxiliar para não repetir código
     private ResponseTicketDto buildResponseTicketDto(Ticket entity) {
         var calledAt = "";
@@ -120,91 +162,6 @@ public class TicketService {
         );
     }
 
-    @Transactional
-    public ResponseCallTicketDto callTicket(CallTicketDto dto) {
-
-        Ticket ticket = this.ticketRepository.findByTicketId(dto.ticketId())
-                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
-
-        ticket.setStatus(TicketStatus.CALLED);
-        ticket.setCalledAt(LocalDateTime.now());
-
-        this.ticketRepository.save(ticket);
-
-        return new ResponseCallTicketDto(
-                ticket.getTicketId(),
-                ticket.getCode(),
-                ticket.getCustomer().getCustomerId(),
-                ticket.getCustomer().getName(),
-                ticket.getServiceManagement().getServiceManagementId(),
-                ticket.getServiceManagement().getName(),
-                ticket.getPriority().name(),
-                ticket.getStatus().name(),
-                ticket.getCreatedAt(),
-                ticket.getCalledAt(),
-                ticket.getStartedAt(),
-                ticket.getFinishedAt()
-        );
-    }
-
-    @Transactional
-    public ResponseStartAttendanceDto startAttendance(StartAttendanceDto dto) {
-
-        Ticket ticket = this.ticketRepository.findById(dto.ticketId())
-                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
-
-        User attendant = this.userRepository.findById(dto.attendantId())
-                .orElseThrow(() -> new EntityNotFoundException("Attendant not found"));
-
-        ticket.setAttendant(attendant);
-        ticket.setStatus(TicketStatus.IN_PROGRESS);
-        ticket.setStartedAt(LocalDateTime.now());
-
-        this.ticketRepository.save(ticket);
-
-        return new ResponseStartAttendanceDto(
-                ticket.getTicketId(),
-                ticket.getCode(),
-                ticket.getCustomer().getCustomerId(),
-                ticket.getCustomer().getName(),
-                ticket.getServiceManagement().getServiceManagementId(),
-                ticket.getServiceManagement().getName(),
-                ticket.getPriority().name(),
-                ticket.getStatus().name(),
-                ticket.getCreatedAt(),
-                ticket.getCalledAt(),
-                ticket.getStartedAt(),
-                ticket.getFinishedAt()
-        );
-    }
-
-    @Transactional
-    public ResponseFinishTicketDto finishTicket(FinishTicketDto dto) {
-
-        Ticket ticket = this.ticketRepository.findById(dto.ticketId())
-                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
-
-        ticket.setStatus(TicketStatus.valueOf(dto.status()));
-        ticket.setFinishedAt(LocalDateTime.now());
-
-        this.ticketRepository.save(ticket);
-
-        return new ResponseFinishTicketDto(
-                ticket.getTicketId(),
-                ticket.getCode(),
-                ticket.getCustomer().getCustomerId(),
-                ticket.getCustomer().getName(),
-                ticket.getServiceManagement().getServiceManagementId(),
-                ticket.getServiceManagement().getName(),
-                ticket.getPriority().name(),
-                ticket.getStatus().name(),
-                ticket.getCreatedAt(),
-                ticket.getCalledAt(),
-                ticket.getStartedAt(),
-                ticket.getFinishedAt()
-        );
-    }
-
     public Page<ResponseAllTicketsDto> getAllTickets(int page, int size) {
 
         return this.ticketRepository.findAll(PageRequest.of(page, size))
@@ -228,19 +185,22 @@ public class TicketService {
     }
 
     @Transactional
-    public void deleteTicket(String ticketId) {
+    public ResponseTicketDto deleteTicket(String ticketId) {
 
-        Ticket ticket = this.ticketRepository.findById(ticketId)
+        var entity = this.ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
 
-        this.ticketRepository.delete(ticket);
+        var response = this.buildResponseTicketDto(entity);
+        this.ticketRepository.delete(entity);
+
+        return response;
     }
 
     private String generateCode() {
 
         return "TCK-" + UUID.randomUUID()
                 .toString()
-                .substring(0, 8)
+                .substring(0, 3)
                 .toUpperCase();
     }
 }

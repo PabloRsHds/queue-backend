@@ -1,4 +1,4 @@
-package br.com.queue.dtos.ticket.create;
+package br.com.queue.dtos.ticket;
 
 public record ResponseTicketDto(
 
