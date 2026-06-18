@@ -20,6 +20,10 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
         s.schedule_id AS scheduleId,
         c.customer_id AS customerId,
         c.name AS customerName,
+        c.cpf AS customerCpf,
+        c.rg AS customerRg,
+        c.phone AS customerPhone,
+        c.email AS customerEmail,
         sm.service_management_id AS serviceManagementId,
         sm.name AS serviceManagementName,
         s.scheduled_date AS scheduleDate,
@@ -33,6 +37,14 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
         :search IS NULL
         OR :search = ''
         OR UNACCENT(LOWER(c.name))
+            LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
+        OR UNACCENT(LOWER(c.cpf))
+            LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
+        OR UNACCENT(LOWER(c.rg))
+            LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
+        OR UNACCENT(LOWER(c.phone))
+            LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
+        OR UNACCENT(LOWER(c.email))
             LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
         OR UNACCENT(LOWER(sm.name))
             LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
@@ -54,6 +66,14 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
         :search IS NULL
         OR :search = ''
         OR UNACCENT(LOWER(c.name))
+            LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
+        OR UNACCENT(LOWER(c.cpf))
+            LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
+        OR UNACCENT(LOWER(c.rg))
+            LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
+        OR UNACCENT(LOWER(c.phone))
+            LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
+        OR UNACCENT(LOWER(c.email))
             LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
         OR UNACCENT(LOWER(sm.name))
             LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
