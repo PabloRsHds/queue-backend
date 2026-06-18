@@ -202,13 +202,21 @@ public class SchedulingService {
             updateAt = null;
         }
 
+        var ticketId = "";
+
+        if (entity.getTicket() != null) {
+            ticketId = entity.getTicket().getTicketId();
+        } else {
+            ticketId = null;
+        }
+
         var response = new ResponseScheduleDto(
                 entity.getScheduleId(),
                 entity.getCustomer().getCustomerId(),
                 entity.getCustomer().getName(),
                 entity.getServiceManagement().getServiceManagementId(),
                 entity.getServiceManagement().getName(),
-                entity.getTicket().getTicketId(),
+                ticketId,
                 entity.getPriority().name(),
                 entity.getScheduledDate(),
                 entity.getStatus().name(),
@@ -218,5 +226,10 @@ public class SchedulingService {
 
         this.scheduleRepository.delete(entity);
         return response;
+    }
+
+    // Estatisticas
+    public int getCountSchedulingOfDay() {
+        return this.scheduleRepository.countSchedulingOfDay();
     }
 }

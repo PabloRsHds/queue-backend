@@ -59,4 +59,10 @@ public class ScheduleController {
         var response = this.schedulingService.deleteSchedule(scheduleId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
     }
+
+    // Estatisticas
+    @GetMapping("/statistics/schedule-day")
+    public int getCountSchedulingOfDay() {
+        return this.schedulingService.getCountSchedulingOfDay();
+    }
 }

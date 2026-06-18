@@ -1,6 +1,7 @@
 package br.com.queue.repositories.schedule;
 
 import br.com.queue.dtos.schedule.allSchedules.ResponseAllSchedulesDto;
+import br.com.queue.dtos.schedule.statistics.ResponseSchedulingStatisticsDto;
 import br.com.queue.entities.schedule.Schedule;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -88,4 +89,11 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
     Page<ResponseAllSchedulesDto> findAllWithSearch(@Param("search") String search,
                                                     @Param("scheduleDate") LocalDate scheduleDate,
                                                     Pageable pageable);
+
+    @Query(value = """
+    SELECT COUNT(*)
+    FROM tb_schedules s
+    WHERE DATE(s.scheduled_date) = CURRENT_DATE
+    """, nativeQuery = true)
+    int countSchedulingOfDay();
 }
