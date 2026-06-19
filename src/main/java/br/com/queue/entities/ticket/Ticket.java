@@ -28,6 +28,9 @@ public class Ticket {
     @Column(nullable = false, unique = true)
     private String code;
 
+    @Column(name = "call_number")
+    private long callNumber;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private TicketStatus status;

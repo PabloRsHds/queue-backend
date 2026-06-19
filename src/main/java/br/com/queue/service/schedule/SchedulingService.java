@@ -3,13 +3,16 @@ package br.com.queue.service.schedule;
 import br.com.queue.dtos.schedule.allSchedules.ResponseAllSchedulesDto;
 import br.com.queue.dtos.schedule.create.CreateScheduleDto;
 import br.com.queue.dtos.schedule.create.ResponseScheduleDto;
+import br.com.queue.dtos.schedule.statistics.ResponseScheduleStatisticsDto;
 import br.com.queue.dtos.schedule.update.UpdateScheduleDto;
 import br.com.queue.entities.schedule.Schedule;
+import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.enums.PriorityLevel;
 import br.com.queue.enums.ScheduleStatus;
 import br.com.queue.repositories.customer.CustomerRepository;
 import br.com.queue.repositories.schedule.ScheduleRepository;
 import br.com.queue.repositories.serviceManagement.ServiceManagementRepository;
+import br.com.queue.repositories.ticket.TicketRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +23,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +32,7 @@ public class SchedulingService {
     private final ScheduleRepository scheduleRepository;
     private final CustomerRepository customerRepository;
     private final ServiceManagementRepository serviceManagementRepository;
+    private final TicketRepository ticketRepository;
 
     @Transactional
     public ResponseScheduleDto createSchedule(CreateScheduleDto dto) {
@@ -58,9 +63,14 @@ public class SchedulingService {
         }
 
         var ticketId = "";
+        var ticketCode = "";
 
         if (entity.getTicket() != null) {
             ticketId = entity.getTicket().getTicketId();
+
+            var ticket = this.ticketRepository.findByTicketId(ticketId).orElseThrow();
+            ticketCode = ticket.getCode();
+
         } else {
             ticketId = null;
         }
@@ -72,6 +82,7 @@ public class SchedulingService {
                 entity.getServiceManagement().getServiceManagementId(),
                 entity.getServiceManagement().getName(),
                 ticketId,
+                ticketCode,
                 entity.getPriority().name(),
                 entity.getScheduledDate(),
                 entity.getStatus().name(),
@@ -114,9 +125,14 @@ public class SchedulingService {
         }
 
         var ticketId = "";
+        var ticketCode = "";
 
         if (schedule.getTicket() != null) {
             ticketId = schedule.getTicket().getTicketId();
+
+            var ticket = this.ticketRepository.findByTicketId(ticketId).orElseThrow();
+            ticketCode = ticket.getCode();
+
         } else {
             ticketId = null;
         }
@@ -131,6 +147,7 @@ public class SchedulingService {
                 schedule.getServiceManagement().getServiceManagementId(),
                 schedule.getServiceManagement().getName(),
                 ticketId,
+                ticketCode,
                 schedule.getPriority().name(),
                 schedule.getScheduledDate(),
                 schedule.getStatus().name(),
@@ -166,9 +183,14 @@ public class SchedulingService {
         }
 
         var ticketId = "";
+        var ticketCode = "";
 
         if (entity.getTicket() != null) {
             ticketId = entity.getTicket().getTicketId();
+
+            var ticket = this.ticketRepository.findByTicketId(ticketId).orElseThrow();
+            ticketCode = ticket.getCode();
+
         } else {
             ticketId = null;
         }
@@ -180,6 +202,7 @@ public class SchedulingService {
                 entity.getServiceManagement().getServiceManagementId(),
                 entity.getServiceManagement().getName(),
                 ticketId,
+                ticketCode,
                 entity.getPriority().name(),
                 entity.getScheduledDate(),
                 entity.getStatus().name(),
@@ -203,9 +226,14 @@ public class SchedulingService {
         }
 
         var ticketId = "";
+        var ticketCode = "";
 
         if (entity.getTicket() != null) {
             ticketId = entity.getTicket().getTicketId();
+
+            var ticket = this.ticketRepository.findByTicketId(ticketId).orElseThrow();
+            ticketCode = ticket.getCode();
+
         } else {
             ticketId = null;
         }
@@ -217,6 +245,7 @@ public class SchedulingService {
                 entity.getServiceManagement().getServiceManagementId(),
                 entity.getServiceManagement().getName(),
                 ticketId,
+                ticketCode,
                 entity.getPriority().name(),
                 entity.getScheduledDate(),
                 entity.getStatus().name(),
@@ -229,7 +258,7 @@ public class SchedulingService {
     }
 
     // Estatisticas
-    public int getCountSchedulingOfDay() {
-        return this.scheduleRepository.countSchedulingOfDay();
+    public ResponseScheduleStatisticsDto getScheduleStatistics() {
+        return this.scheduleRepository.getScheduleStatistics();
     }
 }

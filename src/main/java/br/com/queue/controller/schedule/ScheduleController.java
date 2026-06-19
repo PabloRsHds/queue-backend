@@ -3,6 +3,7 @@ package br.com.queue.controller.schedule;
 import br.com.queue.dtos.schedule.allSchedules.ResponseAllSchedulesDto;
 import br.com.queue.dtos.schedule.create.CreateScheduleDto;
 import br.com.queue.dtos.schedule.create.ResponseScheduleDto;
+import br.com.queue.dtos.schedule.statistics.ResponseScheduleStatisticsDto;
 import br.com.queue.dtos.schedule.update.UpdateScheduleDto;
 import br.com.queue.service.schedule.SchedulingService;
 import lombok.RequiredArgsConstructor;
@@ -61,8 +62,9 @@ public class ScheduleController {
     }
 
     // Estatisticas
-    @GetMapping("/statistics/schedule-day")
-    public int getCountSchedulingOfDay() {
-        return this.schedulingService.getCountSchedulingOfDay();
+    @GetMapping("/statistics")
+    public ResponseEntity<ResponseScheduleStatisticsDto> getScheduleStatistics() {
+        var response = this.schedulingService.getScheduleStatistics();
+        return ResponseEntity.ok(response);
     }
 }

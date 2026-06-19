@@ -1,7 +1,7 @@
 package br.com.queue.repositories.schedule;
 
 import br.com.queue.dtos.schedule.allSchedules.ResponseAllSchedulesDto;
-import br.com.queue.dtos.schedule.statistics.ResponseSchedulingStatisticsDto;
+import br.com.queue.dtos.schedule.statistics.ResponseScheduleStatisticsDto;
 import br.com.queue.entities.schedule.Schedule;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -91,9 +91,13 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
                                                     Pageable pageable);
 
     @Query(value = """
-    SELECT COUNT(*)
-    FROM tb_schedules s
-    WHERE DATE(s.scheduled_date) = CURRENT_DATE
-    """, nativeQuery = true)
-    int countSchedulingOfDay();
+        SELECT
+            COUNT(*) FILTER (WHERE DATE(s.scheduled_date) = CURRENT_DATE) AS schedulingOfDay,
+            COUNT(*) FILTER (WHERE s.status = 'PRESENT' AND DATE(s.scheduled_date) = CURRENT_DATE) AS customerPresent,
+            COUNT(*) FILTER (WHERE s.status = 'CANCELED' AND DATE(s.scheduled_date) = CURRENT_DATE) AS schedulingCanceled,
+            COUNT(*) FILTER (WHERE s.status = 'ABSENT' AND DATE(s.scheduled_date) = CURRENT_DATE) AS absentCustomer
+        FROM tb_schedules s
+        """,
+            nativeQuery = true)
+    ResponseScheduleStatisticsDto getScheduleStatistics();
 }

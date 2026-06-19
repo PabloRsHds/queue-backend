@@ -68,8 +68,11 @@ public class TicketService {
             return buildResponseTicketDto(ticket);
         }
 
+        Long nextCallNumber = ticketRepository.getNextCallNumber();
+
         var entity = new Ticket();
-        entity.setCode(generateCode());
+        entity.setCallNumber(nextCallNumber);
+        entity.setCode(generateCode(serviceManagement.getCode(), nextCallNumber));
         entity.setCustomer(customer);
         entity.setServiceManagement(serviceManagement);
         entity.setPriority(PriorityLevel.valueOf(dto.priority()));
@@ -196,11 +199,16 @@ public class TicketService {
         return response;
     }
 
-    private String generateCode() {
+    private String generateCode(String prefix, long callNumber) {
+        return "%s-%03d".formatted(prefix, callNumber);
+    }
 
-        return "TCK-" + UUID.randomUUID()
-                .toString()
-                .substring(0, 3)
-                .toUpperCase();
+    public void resetCode(String ticketId) {
+
+        var entity = this.ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
+
+        entity.setCallNumber(0);
+        this.ticketRepository.save(entity);
     }
 }
