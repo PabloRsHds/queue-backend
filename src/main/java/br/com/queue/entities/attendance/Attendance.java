@@ -1,6 +1,7 @@
 package br.com.queue.entities.attendance;
 
 import br.com.queue.entities.ticket.Ticket;
+import br.com.queue.entities.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,9 +24,14 @@ public class Attendance {
     @JoinColumn(name = "ticket_id", nullable = false)
     private Ticket ticket;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     @Column(columnDefinition = "TEXT")
     private String observation;
 
+    @Column(columnDefinition = "TEXT")
     private String resolution;
 
     @Column(name = "started_at")

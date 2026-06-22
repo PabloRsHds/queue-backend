@@ -1,13 +1,18 @@
 package br.com.queue.service.attendance;
 
 import br.com.queue.dtos.attendance.allAttendances.ResponseAllAttendances;
-import br.com.queue.dtos.attendance.create.CreateAttendanceDto;
-import br.com.queue.dtos.attendance.create.FinishAttendanceDto;
+import br.com.queue.dtos.attendance.start.StartAttendanceDto;
+import br.com.queue.dtos.attendance.start.FinishAttendanceDto;
 import br.com.queue.dtos.attendance.finish.ResponseAttendanceDto;
 import br.com.queue.dtos.attendance.finish.ResponseFinishAttendanceDto;
+import br.com.queue.dtos.attendance.statistics.ResponseAttendanceStatisticsDto;
 import br.com.queue.entities.attendance.Attendance;
+import br.com.queue.entities.user.User;
+import br.com.queue.enums.Role;
+import br.com.queue.enums.TicketStatus;
 import br.com.queue.repositories.attendance.AttendanceRepository;
 import br.com.queue.repositories.ticket.TicketRepository;
+import br.com.queue.repositories.user.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +21,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -23,41 +29,67 @@ public class AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
     private final TicketRepository ticketRepository;
+    private final UserRepository userRepository;
 
     @Transactional
-    public ResponseAttendanceDto createAttendance(CreateAttendanceDto dto) {
+    public ResponseAttendanceDto startAttendance(StartAttendanceDto dto) {
 
         var ticket = this.ticketRepository.findById(dto.ticketId())
                 .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
 
-        var entity = new Attendance();
+        var user = this.userRepository.findById(dto.userId())
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        entity.setTicket(ticket);
-        entity.setObservation(dto.observation());
-        entity.setResolution(dto.resolution());
-        entity.setStartedAt(LocalDateTime.now());
-        this.attendanceRepository.save(entity);
+        if (user.getRole() != Role.ATTENDANT
+                && user.getRole() != Role.ADMIN) {
+            throw new IllegalStateException(
+                    "User is not allowed to start attendances");
+        }
+
+        if (ticket.getStatus() != TicketStatus.WAITING) {
+            throw new IllegalStateException(
+                    "Only called tickets can start attendance");
+        }
+
+        ticket.setStatus(TicketStatus.IN_PROGRESS);
+
+        var attendance = new Attendance();
+
+        attendance.setTicket(ticket);
+        attendance.setUser(user);
+        attendance.setObservation(dto.observation());
+        attendance.setStartedAt(LocalDateTime.now());
+
+        ticketRepository.save(ticket);
+        attendanceRepository.save(attendance);
 
         return new ResponseAttendanceDto(
-                entity.getTicket().getTicketId(),
-                entity.getTicket().getCode(),
-                entity.getObservation(),
-                entity.getResolution(),
-                entity.getStartedAt(),
-                entity.getFinishedAt()
+                attendance.getTicket().getTicketId(),
+                attendance.getTicket().getCode(),
+                attendance.getObservation(),
+                attendance.getResolution(),
+                attendance.getStartedAt(),
+                attendance.getFinishedAt()
         );
     }
 
     @Transactional
     public ResponseFinishAttendanceDto finishAttendance(FinishAttendanceDto dto) {
 
-        Attendance attendance = this.attendanceRepository.findByAttendanceId(dto.attendanceId())
+        var attendance = this.attendanceRepository.findByAttendanceId(dto.attendanceId())
                 .orElseThrow(() -> new EntityNotFoundException("Attendance not found"));
+
+        var ticket = this.ticketRepository.findByTicketId(dto.ticketId())
+                        .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
 
         attendance.setResolution(dto.resolution());
         attendance.setObservation(dto.observation());
         attendance.setFinishedAt(LocalDateTime.now());
+
+        ticket.setStatus(TicketStatus.FINISHED);
+
         this.attendanceRepository.save(attendance);
+        this.ticketRepository.save(ticket);
 
         return new ResponseFinishAttendanceDto(
                 attendance.getResolution(),
@@ -85,5 +117,58 @@ public class AttendanceService {
                 .orElseThrow(() -> new EntityNotFoundException("Attendance not found"));
 
         this.attendanceRepository.delete(attendance);
+    }
+
+    public ResponseAttendanceStatisticsDto getAttendanceStatistics() {
+
+        var response = this.attendanceRepository.getAttendanceStatistics();
+
+        if (response == null) {
+            return new ResponseAttendanceStatisticsDto(
+                    0L,
+                    0L,
+                    0L,
+                    "00:00:00",
+                    "00:00:00"
+            );
+        }
+
+        var averageWaitingTime = formatSeconds(
+                response.averageWaitingTime() == null
+                        ? null
+                        : response.averageWaitingTime().doubleValue()
+        );
+
+        var averageServiceTime = formatSeconds(
+                response.averageServiceTime() == null
+                        ? null
+                        : response.averageServiceTime().doubleValue()
+        );
+
+        return new ResponseAttendanceStatisticsDto(
+                response.countAttendancesWaiting(),
+                response.countAttendancesInProgress(),
+                response.countAttendancesOfDay(),
+                averageWaitingTime,
+                averageServiceTime
+        );
+    }
+
+    private String formatSeconds(Double seconds) {
+
+        if (seconds == null) {
+            return "00:00:00";
+        }
+
+        long totalSeconds = seconds.longValue();
+
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long secs = totalSeconds % 60;
+
+        return String.format("%02d:%02d:%02d",
+                hours,
+                minutes,
+                secs);
     }
 }

@@ -1,6 +1,5 @@
 package br.com.queue.entities.ticket;
 
-import br.com.queue.entities.user.User;
 import br.com.queue.entities.attendance.Attendance;
 import br.com.queue.entities.customer.Customer;
 import br.com.queue.entities.schedule.Schedule;
@@ -8,7 +7,10 @@ import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.enums.PriorityLevel;
 import br.com.queue.enums.TicketStatus;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
@@ -47,10 +49,6 @@ public class Ticket {
     @JoinColumn(name = "service_management_id", nullable = false)
     private ServiceManagement serviceManagement;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "attendant_id")
-    private User attendant;
-
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_id")
     private Schedule schedule;
@@ -63,10 +61,4 @@ public class Ticket {
 
     @Column(name = "called_at")
     private LocalDateTime calledAt;
-
-    @Column(name = "started_at")
-    private LocalDateTime startedAt;
-
-    @Column(name = "finished_at")
-    private LocalDateTime finishedAt;
 }

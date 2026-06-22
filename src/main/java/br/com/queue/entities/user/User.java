@@ -1,5 +1,6 @@
 package br.com.queue.entities.user;
 
+import br.com.queue.entities.attendance.Attendance;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.enums.Role;
 import jakarta.persistence.*;
@@ -48,7 +49,7 @@ public class User {
     private Boolean active = true;
 
     @Column(name = "counter_number")
-    private Integer counterNumber;
+    private Integer counterNumber = null;
 
     @ManyToMany
     @JoinTable(
@@ -57,6 +58,9 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "service_management_id")
     )
     private Set<ServiceManagement> services = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    private Set<Attendance> attendances = new HashSet<>();
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

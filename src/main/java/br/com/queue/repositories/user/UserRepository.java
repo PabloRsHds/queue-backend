@@ -17,6 +17,7 @@ public interface  UserRepository extends JpaRepository<User, String> {
     Optional<User> findByUserId(String userId);
 
     Optional<User> findByEmail(String email);
+    Optional<User> findByUsername(String username);
 
     @Modifying
     void deleteByUserId(String userId);
@@ -87,4 +88,10 @@ public interface  UserRepository extends JpaRepository<User, String> {
             """,
             nativeQuery = true)
     ResponseUserStatisticsDto getStatistics();
+
+    @Query("""
+        SELECT u FROM User u
+        WHERE u.email = :input OR u.username = :input
+    """)
+    Optional<User> findByEmailOrUsername(@Param("input") String input);
 }

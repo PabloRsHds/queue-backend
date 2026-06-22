@@ -11,8 +11,6 @@ public record ResponseTicketDto(
         String priority,
         String status,
         String createdAt,
-        String calledAt,
-        String startedAt,
-        String finishedAt
+        String calledAt
 ) {
 }

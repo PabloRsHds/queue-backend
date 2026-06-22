@@ -1,10 +1,11 @@
 package br.com.queue.controller.attendance;
 
 import br.com.queue.dtos.attendance.allAttendances.ResponseAllAttendances;
-import br.com.queue.dtos.attendance.create.CreateAttendanceDto;
-import br.com.queue.dtos.attendance.create.FinishAttendanceDto;
+import br.com.queue.dtos.attendance.start.StartAttendanceDto;
+import br.com.queue.dtos.attendance.start.FinishAttendanceDto;
 import br.com.queue.dtos.attendance.finish.ResponseAttendanceDto;
 import br.com.queue.dtos.attendance.finish.ResponseFinishAttendanceDto;
+import br.com.queue.dtos.attendance.statistics.ResponseAttendanceStatisticsDto;
 import br.com.queue.service.attendance.AttendanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,9 +21,9 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
 
     @PostMapping
-    public ResponseEntity<ResponseAttendanceDto> createAttendance(@RequestBody CreateAttendanceDto dto) {
+    public ResponseEntity<ResponseAttendanceDto> startAttendance(@RequestBody StartAttendanceDto dto) {
 
-        var response = this.attendanceService.createAttendance(dto);
+        var response = this.attendanceService.startAttendance(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -43,5 +44,11 @@ public class AttendanceController {
     @DeleteMapping("/{attendanceId}")
     public void deleteAttendance(@PathVariable String attendanceId) {
         attendanceService.deleteAttendance(attendanceId);
+    }
+
+    @GetMapping("/statistics")
+    public ResponseEntity<ResponseAttendanceStatisticsDto> getAttendanceStatistics() {
+        var response = this.attendanceService.getAttendanceStatistics();
+        return ResponseEntity.ok(response);
     }
 }
