@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -55,6 +56,15 @@ public class UserController {
     ) {
 
         var response = this.userService.getUserById(userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/token")
+    public ResponseEntity<ResponseUserInfoDto> getUserByToken(
+            JwtAuthenticationToken token
+    ) {
+
+        var response = this.userService.getUserByToken(token);
         return ResponseEntity.ok(response);
     }
 

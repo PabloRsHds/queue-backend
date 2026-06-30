@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -137,6 +138,38 @@ public class UserService {
     public ResponseUserInfoDto getUserById(String userId) {
 
         var entity = this.userRepository.findByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
+
+        var updateAt = "";
+
+        if (entity.getUpdatedAt() != null ) {
+            updateAt = entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        } else {
+            updateAt = null;
+        }
+
+        return new ResponseUserInfoDto(
+                entity.getUserId(),
+                entity.getUsername(),
+                entity.getName(),
+                entity.getSurname(),
+                entity.getPhone(),
+                entity.getEmail(),
+                entity.getRole().name(),
+                entity.getCounterNumber(),
+                entity.getActive(),
+                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                updateAt,
+                entity.getServices()
+                        .stream()
+                        .map(ServiceManagement::getName)
+                        .collect(Collectors.toSet())
+        );
+    }
+
+    public ResponseUserInfoDto getUserByToken(JwtAuthenticationToken token) {
+
+        var entity = this.userRepository.findByUserId(token.getName())
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
 
         var updateAt = "";
