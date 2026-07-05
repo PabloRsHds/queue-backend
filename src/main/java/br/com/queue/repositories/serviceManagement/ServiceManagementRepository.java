@@ -6,6 +6,7 @@ import br.com.queue.entities.serviceManagement.ServiceManagement;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -21,6 +22,13 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
 
     Set<ServiceManagement> findAllByServiceManagementIdIn(
             Set<String> serviceManagementIds);
+
+    @Modifying
+    @Query(value = """
+    DELETE FROM tb_user_services
+    WHERE service_management_id = :id
+    """, nativeQuery = true)
+    void deleteUserServicesByServiceId(@Param("id") String id);
 
     @Query(value = """
         SELECT

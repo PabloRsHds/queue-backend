@@ -4,8 +4,8 @@ import br.com.queue.dtos.department.ResponseDepartmentDto;
 import br.com.queue.dtos.department.create.CreateDepartmentDto;
 import br.com.queue.dtos.department.getDepartment.ResponseDepartmentNamesDto;
 import br.com.queue.dtos.department.getDepartment.ResponseGetDepartment;
+import br.com.queue.dtos.department.statistics.ResponseDepartmentDashBoardDto;
 import br.com.queue.dtos.department.update.UpdateDepartmentDto;
-import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.service.department.DepartmentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -70,7 +70,7 @@ public class DepartmentController {
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<ResponseStatisticsDto> getStatistics() {
+    public ResponseEntity<ResponseDepartmentDashBoardDto> getStatistics() {
 
         var response = this.departmentService.getStatistics();
         return ResponseEntity.ok(response);

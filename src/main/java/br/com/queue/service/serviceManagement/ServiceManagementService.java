@@ -140,7 +140,6 @@ public class ServiceManagementService {
         var service = this.serviceRepository.findByServiceManagementId(serviceManagementId)
                 .orElseThrow(() -> new EntityNotFoundException("Serviço não encontrado"));
 
-
         var response = new ResponseServiceManagementDto(
                 service.getServiceManagementId(),
                 service.getName(),
@@ -151,6 +150,10 @@ public class ServiceManagementService {
                 service.getActive()
         );
 
+        // Remove os vínculos dos usuários com esse serviço
+        this.serviceRepository.deleteUserServicesByServiceId(service.getServiceManagementId());
+
+        // Agora remove o serviço
         this.serviceRepository.delete(service);
 
         return response;

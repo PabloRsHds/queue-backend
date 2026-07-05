@@ -4,6 +4,7 @@ import br.com.queue.dtos.department.ResponseDepartmentDto;
 import br.com.queue.dtos.department.create.CreateDepartmentDto;
 import br.com.queue.dtos.department.getDepartment.ResponseDepartmentNamesDto;
 import br.com.queue.dtos.department.getDepartment.ResponseGetDepartment;
+import br.com.queue.dtos.department.statistics.ResponseDepartmentDashBoardDto;
 import br.com.queue.dtos.department.update.UpdateDepartmentDto;
 import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.department.Department;
@@ -135,8 +136,16 @@ public class DepartmentService {
         return response;
     }
 
-    public ResponseStatisticsDto getStatistics() {
+    public ResponseDepartmentDashBoardDto getStatistics() {
 
-        return this.departmentRepository.getStatistics();
+        var totalDepartment = this.departmentRepository.countTotalDepartmentsStatisticsDto();
+        var countServicesByDepartments = this.departmentRepository.countServicesByDepartmentStatisticsDto();
+        var departmentPercentages = this.departmentRepository.getDepartmentPercentagesStatisticsDto();
+
+        return new ResponseDepartmentDashBoardDto(
+                totalDepartment,
+                countServicesByDepartments,
+                departmentPercentages
+        );
     }
 }

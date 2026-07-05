@@ -5,6 +5,7 @@ import br.com.queue.enums.Role;
 import br.com.queue.repositories.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 public class AdmService implements CommandLineRunner {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) throws Exception {
@@ -25,14 +27,15 @@ public class AdmService implements CommandLineRunner {
                 () -> {
                     var adm1 = new User();
 
-                    adm1.setUsername("pablorsh");
+                    adm1.setUsername("P2");
                     adm1.setName("Pablo");
                     adm1.setSurname("Renato");
                     adm1.setActive(true);
                     adm1.setCreatedAt(LocalDateTime.now());
                     adm1.setRole(Role.ADMIN);
                     adm1.setEmail("admin@gmail.com");
-                    adm1.setPassword("admin");
+                    adm1.setPassword(this.passwordEncoder.encode("99218841Pp@"));
+                    adm1.setCreatedAt(LocalDateTime.now());
 
                     this.userRepository.save(adm1);
                 }
