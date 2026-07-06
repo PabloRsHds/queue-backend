@@ -5,6 +5,7 @@ import br.com.queue.dtos.serviceManagement.create.CreateServiceManagementDto;
 import br.com.queue.dtos.serviceManagement.getServiceDto.ResponseGetServiceByIdDto;
 import br.com.queue.dtos.serviceManagement.list_service.ResponseServicesForCreatedUser;
 import br.com.queue.dtos.serviceManagement.statistics.ResponseServiceDashBoardDto;
+import br.com.queue.dtos.serviceManagement.statistics.ResponseServicesCreatedByMonthStatisticsDto;
 import br.com.queue.dtos.serviceManagement.update.UpdateServiceManagementDto;
 import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
@@ -164,10 +165,12 @@ public class ServiceManagementService {
 
         var countTotalServices = this.serviceRepository.countTotalServicesStatisticsDto();
         var getPercentagesByServices = this.serviceRepository.getServicePercentagesStatisticsDto();
+        var countServicesCreatedByMonth = this.serviceRepository.countServicesCreatedByMonth();
 
         return new ResponseServiceDashBoardDto(
                 countTotalServices,
-                getPercentagesByServices
+                getPercentagesByServices,
+                countServicesCreatedByMonth
         );
     }
 }

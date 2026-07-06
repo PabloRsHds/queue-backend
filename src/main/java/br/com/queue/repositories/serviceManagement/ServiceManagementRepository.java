@@ -2,9 +2,11 @@ package br.com.queue.repositories.serviceManagement;
 
 import br.com.queue.dtos.department.statistics.ResponseCountTotalDepartmentsStatisticsDto;
 import br.com.queue.dtos.department.statistics.ResponseDepartmentPercentagesStatisticsDto;
+import br.com.queue.dtos.department.statistics.ResponseDepartmentsCreatedByMonthStatisticsDto;
 import br.com.queue.dtos.serviceManagement.ResponseServiceManagementDto;
 import br.com.queue.dtos.serviceManagement.statistics.ResponseCountTotalServicesStatisticsDto;
 import br.com.queue.dtos.serviceManagement.statistics.ResponseServicePercentagesStatisticsDto;
+import br.com.queue.dtos.serviceManagement.statistics.ResponseServicesCreatedByMonthStatisticsDto;
 import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import org.springframework.data.domain.Page;
@@ -14,6 +16,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -110,4 +113,44 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
             nativeQuery = true
     )
     ResponseServicePercentagesStatisticsDto getServicePercentagesStatisticsDto();
+
+    @Query(value = """
+            WITH months AS (
+                SELECT generate_series(1, 12) AS month
+            )
+        
+            SELECT
+                m.month,
+        
+                CASE m.month
+                    WHEN 1 THEN 'Jan'
+                    WHEN 2 THEN 'Fev'
+                    WHEN 3 THEN 'Mar'
+                    WHEN 4 THEN 'Abr'
+                    WHEN 5 THEN 'Mai'
+                    WHEN 6 THEN 'Jun'
+                    WHEN 7 THEN 'Jul'
+                    WHEN 8 THEN 'Ago'
+                    WHEN 9 THEN 'Set'
+                    WHEN 10 THEN 'Out'
+                    WHEN 11 THEN 'Nov'
+                    WHEN 12 THEN 'Dez'
+                END AS monthName,
+        
+                COALESCE(COUNT(s.service_management_id), 0) AS totalServices
+        
+            FROM months m
+        
+            LEFT JOIN tb_service_management s
+                ON EXTRACT(MONTH FROM s.created_at) = m.month
+                AND EXTRACT(YEAR FROM s.created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+        
+            GROUP BY
+                m.month
+        
+            ORDER BY
+                m.month
+            """,
+            nativeQuery = true)
+    List<ResponseServicesCreatedByMonthStatisticsDto> countServicesCreatedByMonth();
 }
