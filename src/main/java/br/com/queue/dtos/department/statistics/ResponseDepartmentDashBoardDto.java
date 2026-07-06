@@ -5,6 +5,7 @@ import java.util.List;
 public record ResponseDepartmentDashBoardDto(
         ResponseCountTotalDepartmentsStatisticsDto countTotalDepartmentsStatistics,
         List<ResponseCountServicesByDepartmentsStatisticsDto> countServicesByDepartments,
-        ResponseDepartmentPercentagesStatisticsDto departmentPercentagesStatistics
+        ResponseDepartmentPercentagesStatisticsDto departmentPercentagesStatistics,
+        List<ResponseDepartmentsCreatedByMonthStatisticsDto> departmentsCreatedByMonthStatistics
 ) {
 }

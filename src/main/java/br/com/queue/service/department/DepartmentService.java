@@ -141,11 +141,13 @@ public class DepartmentService {
         var totalDepartment = this.departmentRepository.countTotalDepartmentsStatisticsDto();
         var countServicesByDepartments = this.departmentRepository.countServicesByDepartmentStatisticsDto();
         var departmentPercentages = this.departmentRepository.getDepartmentPercentagesStatisticsDto();
+        var departmentsCreatedByMonth = this.departmentRepository.countDepartmentsCreatedByMonth();
 
         return new ResponseDepartmentDashBoardDto(
                 totalDepartment,
                 countServicesByDepartments,
-                departmentPercentages
+                departmentPercentages,
+                departmentsCreatedByMonth
         );
     }
 }
