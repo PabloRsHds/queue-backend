@@ -4,9 +4,7 @@ import br.com.queue.dtos.department.statistics.ResponseCountTotalDepartmentsStat
 import br.com.queue.dtos.department.statistics.ResponseDepartmentPercentagesStatisticsDto;
 import br.com.queue.dtos.department.statistics.ResponseDepartmentsCreatedByMonthStatisticsDto;
 import br.com.queue.dtos.serviceManagement.ResponseServiceManagementDto;
-import br.com.queue.dtos.serviceManagement.statistics.ResponseCountTotalServicesStatisticsDto;
-import br.com.queue.dtos.serviceManagement.statistics.ResponseServicePercentagesStatisticsDto;
-import br.com.queue.dtos.serviceManagement.statistics.ResponseServicesCreatedByMonthStatisticsDto;
+import br.com.queue.dtos.serviceManagement.statistics.*;
 import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import org.springframework.data.domain.Page;
@@ -108,7 +106,7 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
                     ) * 100,
                     2
                 ) AS percentageInactive
-            FROM tb_departments
+            FROM tb_service_management
             """,
             nativeQuery = true
     )
@@ -153,4 +151,127 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
             """,
             nativeQuery = true)
     List<ResponseServicesCreatedByMonthStatisticsDto> countServicesCreatedByMonth();
+
+    @Query(value = """
+        SELECT
+            d.name AS departmentName,
+
+            COUNT(s.service_management_id) AS totalServices,
+
+            ROUND(
+                (
+                    COUNT(s.service_management_id)::numeric
+                    /
+                    NULLIF(SUM(COUNT(s.service_management_id)) OVER (), 0)
+                ) * 100,
+                2
+            ) AS percentage
+
+        FROM tb_departments d
+
+        LEFT JOIN tb_service_management s
+            ON s.department_id = d.department_id
+
+        GROUP BY
+            d.department_id,
+            d.name
+
+        ORDER BY totalServices DESC
+        """,
+            nativeQuery = true)
+    List<ResponseServicesByDepartmentStatisticsDto> countServicesByDepartmentStatistics();
+
+    @Query(value = """
+        SELECT
+
+            s.name AS serviceName,
+
+            COUNT(us.user_id) AS totalUsers,
+
+            ROUND(
+                (
+                    COUNT(us.user_id)::numeric
+                    /
+                    NULLIF(SUM(COUNT(us.user_id)) OVER (), 0)
+                ) * 100,
+                2
+            ) AS percentage
+
+        FROM tb_service_management s
+
+        LEFT JOIN tb_user_services us
+            ON us.service_management_id = s.service_management_id
+
+        GROUP BY
+
+            s.service_management_id,
+            s.name
+
+        ORDER BY totalUsers DESC
+        """,
+            nativeQuery = true)
+    List<ResponseUsersByServiceStatisticsDto> countUsersByServiceStatistics();
+
+
+    @Query(value = """
+        SELECT
+
+            s.name AS serviceName,
+
+            COUNT(sc.schedule_id) AS totalSchedules,
+
+            ROUND(
+                (
+                    COUNT(sc.schedule_id)::numeric
+                    /
+                    NULLIF(SUM(COUNT(sc.schedule_id)) OVER (), 0)
+                ) * 100,
+                2
+            ) AS percentage
+
+        FROM tb_service_management s
+
+        LEFT JOIN tb_schedules sc
+            ON sc.service_management_id = s.service_management_id
+
+        GROUP BY
+
+            s.service_management_id,
+            s.name
+
+        ORDER BY totalSchedules DESC
+        """,
+            nativeQuery = true)
+    List<ResponseSchedulesByServiceStatisticsDto> countSchedulesByServiceStatistics();
+
+    @Query(value = """
+        SELECT
+
+            s.name AS serviceName,
+
+            COUNT(t.ticket_id) AS totalTickets,
+
+            ROUND(
+                (
+                    COUNT(t.ticket_id)::numeric
+                    /
+                    NULLIF(SUM(COUNT(t.ticket_id)) OVER (), 0)
+                ) * 100,
+                2
+            ) AS percentage
+
+        FROM tb_service_management s
+
+        LEFT JOIN tb_tickets t
+            ON t.service_management_id = s.service_management_id
+
+        GROUP BY
+
+            s.service_management_id,
+            s.name
+
+        ORDER BY totalTickets DESC
+        """,
+            nativeQuery = true)
+    List<ResponseTicketsByServiceStatisticsDto> countTicketsByServiceStatistics();
 }

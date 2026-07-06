@@ -166,11 +166,19 @@ public class ServiceManagementService {
         var countTotalServices = this.serviceRepository.countTotalServicesStatisticsDto();
         var getPercentagesByServices = this.serviceRepository.getServicePercentagesStatisticsDto();
         var countServicesCreatedByMonth = this.serviceRepository.countServicesCreatedByMonth();
+        var countServicesByDepartments = this.serviceRepository.countServicesByDepartmentStatistics();
+        var countUsersByService = this.serviceRepository.countUsersByServiceStatistics();
+        var countSchedulesByService = this.serviceRepository.countSchedulesByServiceStatistics();
+        var countTicketsByService = this.serviceRepository.countTicketsByServiceStatistics();
 
         return new ResponseServiceDashBoardDto(
                 countTotalServices,
                 getPercentagesByServices,
-                countServicesCreatedByMonth
+                countServicesCreatedByMonth,
+                countServicesByDepartments,
+                countUsersByService,
+                countSchedulesByService,
+                countTicketsByService
         );
     }
 }
