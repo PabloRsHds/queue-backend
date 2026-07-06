@@ -4,6 +4,7 @@ import br.com.queue.dtos.serviceManagement.create.CreateServiceManagementDto;
 import br.com.queue.dtos.serviceManagement.ResponseServiceManagementDto;
 import br.com.queue.dtos.serviceManagement.getServiceDto.ResponseGetServiceByIdDto;
 import br.com.queue.dtos.serviceManagement.list_service.ResponseServicesForCreatedUser;
+import br.com.queue.dtos.serviceManagement.statistics.ResponseServiceDashBoardDto;
 import br.com.queue.dtos.serviceManagement.update.UpdateServiceManagementDto;
 import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.service.serviceManagement.ServiceManagementService;
@@ -74,7 +75,7 @@ public class ServiceManagementController {
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<ResponseStatisticsDto> getStatistics() {
+    public ResponseEntity<ResponseServiceDashBoardDto> getStatistics() {
 
         var response = this.serviceManagementService.getStatistics();
         return ResponseEntity.ok(response);

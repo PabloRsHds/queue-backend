@@ -1,6 +1,10 @@
 package br.com.queue.repositories.serviceManagement;
 
+import br.com.queue.dtos.department.statistics.ResponseCountTotalDepartmentsStatisticsDto;
+import br.com.queue.dtos.department.statistics.ResponseDepartmentPercentagesStatisticsDto;
 import br.com.queue.dtos.serviceManagement.ResponseServiceManagementDto;
+import br.com.queue.dtos.serviceManagement.statistics.ResponseCountTotalServicesStatisticsDto;
+import br.com.queue.dtos.serviceManagement.statistics.ResponseServicePercentagesStatisticsDto;
 import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import org.springframework.data.domain.Page;
@@ -74,11 +78,19 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
     )
     Page<ResponseServiceManagementDto> findAllWithSearch(@Param("search") String search, Pageable pageable);
 
+    // Statistics
     @Query(value = """
             SELECT
                 COUNT(*) AS totalElements,
                 COUNT(*) FILTER (WHERE active = true) AS totalElementsActive,
-                COUNT(*) FILTER (WHERE active = false) AS totalElementsInactive,
+                COUNT(*) FILTER (WHERE active = false) AS totalElementsInactive
+            FROM tb_service_management
+            """,
+            nativeQuery = true)
+    ResponseCountTotalServicesStatisticsDto countTotalServicesStatisticsDto();
+
+    @Query(value = """
+            SELECT
                 ROUND(
                     (
                         COUNT(*) FILTER (WHERE active = true)::numeric
@@ -93,8 +105,9 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
                     ) * 100,
                     2
                 ) AS percentageInactive
-            FROM tb_service_management
+            FROM tb_departments
             """,
-            nativeQuery = true)
-    ResponseStatisticsDto getStatistics();
+            nativeQuery = true
+    )
+    ResponseServicePercentagesStatisticsDto getServicePercentagesStatisticsDto();
 }
