@@ -1,9 +1,9 @@
 package br.com.queue.service.user;
 
-import br.com.queue.dtos.statistics.ResponseUserStatisticsDto;
 import br.com.queue.dtos.user.ResponseUserDto;
 import br.com.queue.dtos.user.create.CreateUserDto;
 import br.com.queue.dtos.user.get_user.ResponseUserInfoDto;
+import br.com.queue.dtos.user.metrics.ResponseUserDashBoardDto;
 import br.com.queue.dtos.user.update.UpdateUserDto;
 import br.com.queue.dtos.user.users.ResponseAllUsersDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
@@ -231,8 +231,20 @@ public class UserService {
         return response;
     }
 
-    public ResponseUserStatisticsDto getStatistics() {
+    public ResponseUserDashBoardDto getStatistics() {
 
-        return this.userRepository.getStatistics();
+        var countTotalUsersStatistics = this.userRepository.countTotalUsersStatisticsDto();
+        var userPercentagesStatistics = this.userRepository.getUserPercentagesStatisticsDto();
+        var usersCreatedByMonthStatistics = this.userRepository.countUsersCreatedByMonth();
+        var countServicesByUsers = this.userRepository.countServicesByUserStatistics();
+        var countRoleByUsers = this.userRepository.countUsersByRoleStatistics();
+
+        return new ResponseUserDashBoardDto(
+                countTotalUsersStatistics,
+                userPercentagesStatistics,
+                usersCreatedByMonthStatistics,
+                countServicesByUsers,
+                countRoleByUsers
+        );
     }
 }

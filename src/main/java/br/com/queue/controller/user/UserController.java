@@ -4,6 +4,7 @@ import br.com.queue.dtos.statistics.ResponseUserStatisticsDto;
 import br.com.queue.dtos.user.ResponseUserDto;
 import br.com.queue.dtos.user.create.CreateUserDto;
 import br.com.queue.dtos.user.get_user.ResponseUserInfoDto;
+import br.com.queue.dtos.user.metrics.ResponseUserDashBoardDto;
 import br.com.queue.dtos.user.update.UpdateUserDto;
 import br.com.queue.dtos.user.users.ResponseAllUsersDto;
 import br.com.queue.service.user.UserService;
@@ -76,7 +77,7 @@ public class UserController {
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<ResponseUserStatisticsDto> getStatistics() {
+    public ResponseEntity<ResponseUserDashBoardDto> getStatistics() {
 
         var response = this.userService.getStatistics();
         return ResponseEntity.ok(response);
