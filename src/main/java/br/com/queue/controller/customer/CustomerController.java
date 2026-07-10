@@ -5,7 +5,9 @@ import br.com.queue.dtos.customer.create.CreateCustomerDto;
 import br.com.queue.dtos.customer.create.ResponseCustomerDto;
 import br.com.queue.dtos.customer.getCustomer.ResponseCustomerById;
 import br.com.queue.dtos.customer.getCustomer.ResponseGetCustomerIdsAndNames;
+import br.com.queue.dtos.customer.statistics.ResponseCustomerDashBoardDto;
 import br.com.queue.dtos.customer.update.UpdateCustomerDto;
+import br.com.queue.dtos.user.metrics.ResponseUserDashBoardDto;
 import br.com.queue.service.customer.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -66,5 +68,12 @@ public class CustomerController {
 
         var response = this.customerService.deleteCustomer(customerId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+    }
+
+    @GetMapping("/statistics")
+    public ResponseEntity<ResponseCustomerDashBoardDto> getStatistics() {
+
+        var response = this.customerService.getStatistics();
+        return ResponseEntity.ok(response);
     }
 }

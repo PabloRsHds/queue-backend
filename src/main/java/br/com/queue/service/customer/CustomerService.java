@@ -5,7 +5,9 @@ import br.com.queue.dtos.customer.create.CreateCustomerDto;
 import br.com.queue.dtos.customer.create.ResponseCustomerDto;
 import br.com.queue.dtos.customer.getCustomer.ResponseCustomerById;
 import br.com.queue.dtos.customer.getCustomer.ResponseGetCustomerIdsAndNames;
+import br.com.queue.dtos.customer.statistics.ResponseCustomerDashBoardDto;
 import br.com.queue.dtos.customer.update.UpdateCustomerDto;
+import br.com.queue.dtos.user.metrics.ResponseUserDashBoardDto;
 import br.com.queue.entities.customer.Customer;
 import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.repositories.customer.CustomerRepository;
@@ -162,5 +164,16 @@ public class CustomerService {
 
         this.customerRepository.delete(entity);
         return response;
+    }
+
+    public ResponseCustomerDashBoardDto getStatistics() {
+
+        var countTotalCustomersStatistics = this.customerRepository.countTotalCustomerStatisticsDto();
+        var customersCreatedByMonthStatistics = this.customerRepository.countCustomersCreatedByMonth();
+
+        return new ResponseCustomerDashBoardDto(
+                countTotalCustomersStatistics,
+                customersCreatedByMonthStatistics
+        );
     }
 }
