@@ -1,7 +1,7 @@
 package br.com.queue.repositories.schedule;
 
 import br.com.queue.dtos.schedule.allSchedules.ResponseAllSchedulesDto;
-import br.com.queue.dtos.schedule.statistics.ResponseScheduleStatisticsDto;
+import br.com.queue.dtos.schedule.statistics.*;
 import br.com.queue.entities.schedule.Schedule;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface ScheduleRepository extends JpaRepository<Schedule, String> {
@@ -90,14 +91,290 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
                                                     @Param("scheduleDate") LocalDate scheduleDate,
                                                     Pageable pageable);
 
+    // Novas queries
+
+    // TOTAL
+    @Query(value = """
+    SELECT
+
+        COUNT(*) AS totalElements,
+
+        COUNT(*) FILTER (
+            WHERE status = 'SCHEDULED'
+        ) AS scheduled,
+
+        COUNT(*) FILTER (
+            WHERE status = 'PRESENT'
+        ) AS present,
+
+        COUNT(*) FILTER (
+            WHERE status = 'CANCELED'
+        ) AS canceled,
+
+        COUNT(*) FILTER (
+            WHERE status = 'ABSENT'
+        ) AS absent
+
+    FROM tb_schedules
+    """,
+            nativeQuery = true)
+    ResponseCountTotalSchedulesStatisticsDto countTotalSchedulesStatisticsDto();
+
+    // PORCENTAGEM
+    @Query(value = """
+    SELECT
+
+        ROUND(
+            COUNT(*) FILTER (WHERE status = 'SCHEDULED')::numeric
+            / NULLIF(COUNT(*),0) * 100,
+            2
+        ) AS scheduled,
+
+        ROUND(
+            COUNT(*) FILTER (WHERE status = 'PRESENT')::numeric
+            / NULLIF(COUNT(*),0) * 100,
+            2
+        ) AS present,
+
+        ROUND(
+            COUNT(*) FILTER (WHERE status = 'CANCELED')::numeric
+            / NULLIF(COUNT(*),0) * 100,
+            2
+        ) AS canceled,
+
+        ROUND(
+            COUNT(*) FILTER (WHERE status = 'ABSENT')::numeric
+            / NULLIF(COUNT(*),0) * 100,
+            2
+        ) AS absent
+
+    FROM tb_schedules
+    """,
+            nativeQuery = true)
+    ResponseSchedulePercentagesStatisticsDto getSchedulePercentagesStatisticsDto();
+
+    // Total de agendamentos do mês
+    @Query(value = """
+        WITH months AS (
+            SELECT generate_series(1, 12) AS month
+        )
+
+        SELECT
+
+            m.month,
+
+            CASE m.month
+                WHEN 1 THEN 'Jan'
+                WHEN 2 THEN 'Fev'
+                WHEN 3 THEN 'Mar'
+                WHEN 4 THEN 'Abr'
+                WHEN 5 THEN 'Mai'
+                WHEN 6 THEN 'Jun'
+                WHEN 7 THEN 'Jul'
+                WHEN 8 THEN 'Ago'
+                WHEN 9 THEN 'Set'
+                WHEN 10 THEN 'Out'
+                WHEN 11 THEN 'Nov'
+                WHEN 12 THEN 'Dez'
+            END AS monthName,
+
+            COALESCE(
+                COUNT(s.schedule_id),
+                0
+            ) AS totalSchedules
+
+        FROM months m
+
+        LEFT JOIN tb_schedules s
+            ON EXTRACT(MONTH FROM s.created_at) = m.month
+            AND EXTRACT(YEAR FROM s.created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+
+        GROUP BY
+            m.month
+
+        ORDER BY
+            m.month
+        """,
+            nativeQuery = true)
+    List<ResponseSchedulesCreatedByMonthStatisticsDto> countSchedulesCreatedByMonth();
+
+    // agendamentos da semana
+    @Query(value = """
+    WITH week_days AS (
+
+        SELECT generate_series(
+            date_trunc('week', CURRENT_DATE)::date,
+            (date_trunc('week', CURRENT_DATE) + interval '6 days')::date,
+            interval '1 day'
+        )::date AS day
+
+    )
+
+    SELECT
+
+        EXTRACT(DAY FROM w.day)::int AS day,
+
+        CASE EXTRACT(ISODOW FROM w.day)
+            WHEN 1 THEN 'Seg'
+            WHEN 2 THEN 'Ter'
+            WHEN 3 THEN 'Qua'
+            WHEN 4 THEN 'Qui'
+            WHEN 5 THEN 'Sex'
+            WHEN 6 THEN 'Sáb'
+            WHEN 7 THEN 'Dom'
+        END AS weekDay,
+
+        COALESCE(
+            COUNT(s.schedule_id),
+            0
+        ) AS totalSchedules
+
+    FROM week_days w
+
+    LEFT JOIN tb_schedules s
+        ON DATE(s.created_at) = w.day
+
+    GROUP BY
+        w.day
+
+    ORDER BY
+        w.day
+    """,
+            nativeQuery = true)
+    List<ResponseSchedulesCreatedByWeekStatisticsDto> countSchedulesCreatedByWeek();
+
+    // Agendamentos do dia
     @Query(value = """
         SELECT
-            COUNT(*) FILTER (WHERE DATE(s.scheduled_date) = CURRENT_DATE) AS schedulingOfDay,
+            COUNT(*) FILTER (WHERE s.status = 'ABSENT' AND DATE(s.scheduled_date) = CURRENT_DATE) AS absentCustomer,
             COUNT(*) FILTER (WHERE s.status = 'PRESENT' AND DATE(s.scheduled_date) = CURRENT_DATE) AS customerPresent,
             COUNT(*) FILTER (WHERE s.status = 'CANCELED' AND DATE(s.scheduled_date) = CURRENT_DATE) AS schedulingCanceled,
-            COUNT(*) FILTER (WHERE s.status = 'ABSENT' AND DATE(s.scheduled_date) = CURRENT_DATE) AS absentCustomer
+            COUNT(*) FILTER (WHERE DATE(s.scheduled_date) = CURRENT_DATE) AS schedulingOfDay
+   
         FROM tb_schedules s
         """,
             nativeQuery = true)
-    ResponseScheduleStatisticsDto getScheduleStatistics();
+    ResponseSchedulesCreatedByDayStatisticsDto countSchedulesCreatedByDay();
+
+    // agendamentos por departamento
+    @Query(value = """
+    SELECT
+
+        d.name AS departmentName,
+
+        COUNT(s.schedule_id) AS totalSchedules,
+
+        ROUND(
+            (
+                COUNT(s.schedule_id)::numeric
+                /
+                NULLIF(SUM(COUNT(s.schedule_id)) OVER (), 0)
+            ) * 100,
+            2
+        ) AS percentage
+
+    FROM tb_departments d
+
+    LEFT JOIN tb_service_management sm
+        ON sm.department_id = d.department_id
+
+    LEFT JOIN tb_schedules s
+        ON s.service_management_id = sm.service_management_id
+
+    GROUP BY
+        d.department_id,
+        d.name
+
+    ORDER BY
+        totalSchedules DESC
+    """,
+            nativeQuery = true)
+    List<ResponseSchedulesByDepartmentStatisticsDto> countSchedulesByDepartment();
+
+    // Agendamentos por serviço
+    @Query(value = """
+    SELECT
+
+        sm.name AS serviceName,
+
+        COUNT(s.schedule_id) AS totalSchedules,
+
+        ROUND(
+            (
+                COUNT(s.schedule_id)::numeric
+                /
+                NULLIF(SUM(COUNT(s.schedule_id)) OVER (), 0)
+            ) * 100,
+            2
+        ) AS percentage
+
+    FROM tb_service_management sm
+
+    LEFT JOIN tb_schedules s
+        ON s.service_management_id = sm.service_management_id
+
+    GROUP BY
+        sm.service_management_id,
+        sm.name
+
+    ORDER BY
+        totalSchedules DESC
+    """,
+            nativeQuery = true)
+    List<ResponseSchedulesByServiceStatisticsDto> countSchedulesByService();
+
+    // Agendamento por prioridade
+    @Query(value = """
+    SELECT
+
+        priority,
+
+        COUNT(*) AS totalSchedules,
+
+        ROUND(
+            (
+                COUNT(*)::numeric
+                /
+                NULLIF(SUM(COUNT(*)) OVER (), 0)
+            ) * 100,
+            2
+        ) AS percentage
+
+    FROM tb_schedules
+
+    GROUP BY
+        priority
+
+    ORDER BY
+        totalSchedules DESC
+    """,
+            nativeQuery = true)
+    List<ResponseSchedulesByPriorityStatisticsDto> countSchedulesByPriority();
+
+    // Horários de agendamentos mais procurados
+    @Query(value = """
+    WITH hours AS (
+        SELECT generate_series(0, 23) AS hour
+    )
+
+    SELECT
+        h.hour,
+        COALESCE(
+            COUNT(s.schedule_id),
+            0
+        ) AS totalSchedules
+
+    FROM hours h
+
+    LEFT JOIN tb_schedules s
+        ON EXTRACT(HOUR FROM s.scheduled_date) = h.hour
+
+    GROUP BY
+        h.hour
+
+    ORDER BY
+        h.hour
+    """,
+            nativeQuery = true)
+    List<ResponseSchedulesByHourStatisticsDto> countSchedulesByHour();
 }

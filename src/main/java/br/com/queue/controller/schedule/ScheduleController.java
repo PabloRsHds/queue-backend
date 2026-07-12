@@ -3,7 +3,7 @@ package br.com.queue.controller.schedule;
 import br.com.queue.dtos.schedule.allSchedules.ResponseAllSchedulesDto;
 import br.com.queue.dtos.schedule.create.CreateScheduleDto;
 import br.com.queue.dtos.schedule.create.ResponseScheduleDto;
-import br.com.queue.dtos.schedule.statistics.ResponseScheduleStatisticsDto;
+import br.com.queue.dtos.schedule.statistics.ResponseScheduleDashBoardDto;
 import br.com.queue.dtos.schedule.update.UpdateScheduleDto;
 import br.com.queue.service.schedule.SchedulingService;
 import lombok.RequiredArgsConstructor;
@@ -24,15 +24,13 @@ public class ScheduleController {
     @PostMapping
     public ResponseEntity<ResponseScheduleDto> createSchedule(@RequestBody CreateScheduleDto dto) {
 
-        var response = this.schedulingService.createSchedule(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(this.schedulingService.createSchedule(dto));
     }
 
     @PatchMapping()
     public ResponseEntity<ResponseScheduleDto> updateSchedule(@RequestBody UpdateScheduleDto dto) {
 
-        var response = this.schedulingService.updateSchedule(dto);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(this.schedulingService.updateSchedule(dto));
     }
 
     @GetMapping
@@ -43,28 +41,25 @@ public class ScheduleController {
             @RequestParam(required = false) String search
     ) {
 
-        var response = this.schedulingService.getAllSchedules(page, size, search, scheduleDate);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(this.schedulingService.getAllSchedules(page, size, search, scheduleDate));
     }
 
     @GetMapping("/{scheduleId}")
     public ResponseEntity<ResponseScheduleDto> getScheduleById(@PathVariable String scheduleId) {
 
-        var response = this.schedulingService.getScheduleById(scheduleId);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(this.schedulingService.getScheduleById(scheduleId));
     }
 
     @DeleteMapping("/{scheduleId}")
     public ResponseEntity<ResponseScheduleDto> deleteSchedule(@PathVariable String scheduleId) {
 
-        var response = this.schedulingService.deleteSchedule(scheduleId);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(this.schedulingService.deleteSchedule(scheduleId));
     }
 
     // Estatisticas
     @GetMapping("/statistics")
-    public ResponseEntity<ResponseScheduleStatisticsDto> getScheduleStatistics() {
-        var response = this.schedulingService.getScheduleStatistics();
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ResponseScheduleDashBoardDto> getScheduleStatistics() {
+
+        return ResponseEntity.ok(this.schedulingService.getScheduleStatistics());
     }
 }

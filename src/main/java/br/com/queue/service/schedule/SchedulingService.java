@@ -3,10 +3,9 @@ package br.com.queue.service.schedule;
 import br.com.queue.dtos.schedule.allSchedules.ResponseAllSchedulesDto;
 import br.com.queue.dtos.schedule.create.CreateScheduleDto;
 import br.com.queue.dtos.schedule.create.ResponseScheduleDto;
-import br.com.queue.dtos.schedule.statistics.ResponseScheduleStatisticsDto;
+import br.com.queue.dtos.schedule.statistics.ResponseScheduleDashBoardDto;
 import br.com.queue.dtos.schedule.update.UpdateScheduleDto;
 import br.com.queue.entities.schedule.Schedule;
-import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.enums.PriorityLevel;
 import br.com.queue.enums.ScheduleStatus;
 import br.com.queue.repositories.customer.CustomerRepository;
@@ -23,7 +22,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -257,8 +255,20 @@ public class SchedulingService {
         return response;
     }
 
-    // Estatisticas
-    public ResponseScheduleStatisticsDto getScheduleStatistics() {
-        return this.scheduleRepository.getScheduleStatistics();
+    // Estatísticas
+    public ResponseScheduleDashBoardDto getScheduleStatistics() {
+
+        return new ResponseScheduleDashBoardDto(
+
+                this.scheduleRepository.countTotalSchedulesStatisticsDto(),
+                this.scheduleRepository.getSchedulePercentagesStatisticsDto(),
+                this.scheduleRepository.countSchedulesCreatedByMonth(),
+                this.scheduleRepository.countSchedulesCreatedByWeek(),
+                this.scheduleRepository.countSchedulesCreatedByDay(),
+                this.scheduleRepository.countSchedulesByDepartment(),
+                this.scheduleRepository.countSchedulesByService(),
+                this.scheduleRepository.countSchedulesByPriority(),
+                this.scheduleRepository.countSchedulesByHour()
+        );
     }
 }
