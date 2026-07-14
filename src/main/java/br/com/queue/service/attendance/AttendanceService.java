@@ -5,9 +5,8 @@ import br.com.queue.dtos.attendance.start.StartAttendanceDto;
 import br.com.queue.dtos.attendance.start.FinishAttendanceDto;
 import br.com.queue.dtos.attendance.finish.ResponseAttendanceDto;
 import br.com.queue.dtos.attendance.finish.ResponseFinishAttendanceDto;
-import br.com.queue.dtos.attendance.statistics.ResponseAttendanceStatisticsDto;
+import br.com.queue.dtos.attendance.statistics.ResponseAttendanceDashboardDto;
 import br.com.queue.entities.attendance.Attendance;
-import br.com.queue.entities.user.User;
 import br.com.queue.enums.Role;
 import br.com.queue.enums.TicketStatus;
 import br.com.queue.repositories.attendance.AttendanceRepository;
@@ -21,7 +20,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -119,56 +117,30 @@ public class AttendanceService {
         this.attendanceRepository.delete(attendance);
     }
 
-    public ResponseAttendanceStatisticsDto getAttendanceStatistics() {
+    public ResponseAttendanceDashboardDto getAttendanceStatistics() {
 
-        var response = this.attendanceRepository.getAttendanceStatistics();
+        return new ResponseAttendanceDashboardDto(
 
-        if (response == null) {
-            return new ResponseAttendanceStatisticsDto(
-                    0L,
-                    0L,
-                    0L,
-                    "00:00:00",
-                    "00:00:00"
-            );
-        }
+                attendanceRepository.countTotalAttendances(),
 
-        var averageWaitingTime = formatSeconds(
-                response.averageWaitingTime() == null
-                        ? null
-                        : response.averageWaitingTime().doubleValue()
+                attendanceRepository.getAverageWaitingTime(),
+
+                attendanceRepository.getAverageServiceTime(),
+
+                attendanceRepository.averageAttendanceByUser(),
+
+                attendanceRepository.countAttendancesCreatedByMonth(),
+
+                attendanceRepository.countAttendancesByWeek(),
+
+                attendanceRepository.countAttendancesByService(),
+
+                attendanceRepository.countAttendancesByHour(),
+
+                attendanceRepository.countAttendancesByDepartment(),
+
+                attendanceRepository.countAttendancesByCustomer()
+
         );
-
-        var averageServiceTime = formatSeconds(
-                response.averageServiceTime() == null
-                        ? null
-                        : response.averageServiceTime().doubleValue()
-        );
-
-        return new ResponseAttendanceStatisticsDto(
-                response.countAttendancesWaiting(),
-                response.countAttendancesInProgress(),
-                response.countAttendancesOfDay(),
-                averageWaitingTime,
-                averageServiceTime
-        );
-    }
-
-    private String formatSeconds(Double seconds) {
-
-        if (seconds == null) {
-            return "00:00:00";
-        }
-
-        long totalSeconds = seconds.longValue();
-
-        long hours = totalSeconds / 3600;
-        long minutes = (totalSeconds % 3600) / 60;
-        long secs = totalSeconds % 60;
-
-        return String.format("%02d:%02d:%02d",
-                hours,
-                minutes,
-                secs);
     }
 }

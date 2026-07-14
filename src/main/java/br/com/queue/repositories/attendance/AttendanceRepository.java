@@ -1,25 +1,300 @@
 package br.com.queue.repositories.attendance;
 
-import br.com.queue.dtos.attendance.statistics.GetAttendanceStatisticsDto;
+import br.com.queue.dtos.attendance.statistics.*;
 import br.com.queue.entities.attendance.Attendance;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface AttendanceRepository extends JpaRepository<Attendance, String> {
 
     Optional<Attendance> findByAttendanceId(String attendanceId);
 
+    // Contagem total de atendimentos
+    @Query(value = """
+    SELECT
+        COUNT(*) FILTER (WHERE t.status = 'WAITING') AS countAttendancesWaiting,
+        COUNT(*) FILTER (WHERE t.status = 'IN_PROGRESS') AS countAttendancesInProgress,
+        COUNT(*) FILTER (
+            WHERE t.status = 'FINISHED'
+            AND DATE(a.started_at) = CURRENT_DATE
+        ) AS attendancesToday,
+
+        COUNT(*) FILTER (
+            WHERE t.status = 'FINISHED'
+            AND DATE(a.started_at) >= DATE_TRUNC('week', CURRENT_DATE)
+        ) AS attendancesThisWeek,
+
+        COUNT(*) FILTER (
+            WHERE t.status = 'FINISHED'
+            AND DATE_TRUNC('month', a.started_at) = DATE_TRUNC('month', CURRENT_DATE)
+        ) AS attendancesThisMonth,
+
+        COUNT(*) FILTER (
+            WHERE t.status = 'FINISHED'
+        ) AS totalAttendances
+
+    FROM tb_attendances a
+    RIGHT JOIN tb_tickets t ON a.ticket_id = t.ticket_id
+    """, nativeQuery = true)
+    ResponseCountTotalAttendancesStatisticsDto countTotalAttendances();
+
+    // Pegar a média de tempo de espera
+    @Query(value = """
+            SELECT
+                AVG(EXTRACT(EPOCH FROM (a.started_at - t.created_at))) FILTER (WHERE a.started_at IS NOT NULL AND t.created_at IS NOT NULL) AS averageWaitingTime
+            FROM tb_attendances a
+            RIGHT JOIN tb_tickets t ON a.ticket_id = t.ticket_id
+            """, nativeQuery = true)
+    ResponseAverageWaitingTimeStatisticsDto getAverageWaitingTime();
+
+    // Pegar a média do tempo de atendimento
+    @Query(value = """
+            SELECT
+                AVG(EXTRACT(EPOCH FROM (a.finished_at - a.started_at))) FILTER (WHERE a.started_at IS NOT NULL AND a.finished_at IS NOT NULL) AS averageServiceTime
+            FROM tb_attendances a
+            RIGHT JOIN tb_tickets t ON a.ticket_id = t.ticket_id
+            """, nativeQuery = true)
+    ResponseAverageServiceTimeStatisticsDto getAverageServiceTime();
+
+    // Média de atendimento do atendente
+    @Query(value = """
+    SELECT
+        u.username AS username,
+
+        ROUND(
+            AVG(
+                EXTRACT(EPOCH FROM (a.finished_at - a.started_at)) / 60
+            )::numeric,
+            2
+        ) AS averageMinutes
+
+    FROM tb_attendances a
+
+    INNER JOIN tb_users u
+        ON u.user_id = a.user_id
+
+    WHERE
+        a.started_at IS NOT NULL
+        AND a.finished_at IS NOT NULL
+
+    GROUP BY
+        u.user_id,
+        u.username
+
+    ORDER BY
+        averageMinutes ASC
+    """,
+            nativeQuery = true)
+    List<ResponseAverageAttendanceByUserStatisticsDto> averageAttendanceByUser();
+
+    // Atendimentos no mês
+    @Query(value = """
+        WITH months AS (
+            SELECT generate_series(1, 12) AS month
+        )
+
+        SELECT
+            m.month,
+
+            CASE m.month
+                WHEN 1 THEN 'Jan'
+                WHEN 2 THEN 'Fev'
+                WHEN 3 THEN 'Mar'
+                WHEN 4 THEN 'Abr'
+                WHEN 5 THEN 'Mai'
+                WHEN 6 THEN 'Jun'
+                WHEN 7 THEN 'Jul'
+                WHEN 8 THEN 'Ago'
+                WHEN 9 THEN 'Set'
+                WHEN 10 THEN 'Out'
+                WHEN 11 THEN 'Nov'
+                WHEN 12 THEN 'Dez'
+            END AS monthName,
+
+            COALESCE(COUNT(a.attendance_id), 0) AS totalAttendances
+
+        FROM months m
+
+        LEFT JOIN tb_attendances a
+            ON EXTRACT(MONTH FROM a.started_at) = m.month
+            AND EXTRACT(YEAR FROM a.started_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+
+        GROUP BY
+            m.month
+
+        ORDER BY
+            m.month
+        """,
+            nativeQuery = true)
+    List<ResponseAttendancesCreatedByMonthStatisticsDto> countAttendancesCreatedByMonth();
+
+    // Atendimentos na semana
+    @Query(value = """
+        WITH days AS (
+            SELECT generate_series(1, 7) AS day_of_week
+        )
+
+        SELECT
+            d.day_of_week AS dayOfWeek,
+
+            CASE d.day_of_week
+                WHEN 1 THEN 'Seg'
+                WHEN 2 THEN 'Ter'
+                WHEN 3 THEN 'Qua'
+                WHEN 4 THEN 'Qui'
+                WHEN 5 THEN 'Sex'
+                WHEN 6 THEN 'Sáb'
+                WHEN 7 THEN 'Dom'
+            END AS dayName,
+
+            COALESCE(COUNT(a.attendance_id), 0) AS totalAttendances
+
+        FROM days d
+
+        LEFT JOIN tb_attendances a
+            ON EXTRACT(ISODOW FROM a.started_at) = d.day_of_week
+            AND DATE(a.started_at) >= DATE_TRUNC('week', CURRENT_DATE)
+            AND DATE(a.started_at) < DATE_TRUNC('week', CURRENT_DATE) + INTERVAL '7 days'
+
+        GROUP BY
+            d.day_of_week
+
+        ORDER BY
+            d.day_of_week
+        """,
+            nativeQuery = true)
+    List<ResponseAttendancesByWeekStatisticsDto> countAttendancesByWeek();
+
+    // quantos atendimentos por serviço
     @Query(value = """
         SELECT
-            COUNT(*) FILTER (WHERE t.status = 'WAITING') AS countAttendancesWaiting,
-            COUNT(*) FILTER (WHERE t.status = 'IN_PROGRESS') AS countAttendancesInProgress,
-            COUNT(*) FILTER (WHERE t.status = 'FINISHED' AND DATE(a.started_at) = CURRENT_DATE) AS countAttendancesOfDay,
-            AVG(EXTRACT(EPOCH FROM (a.started_at - t.created_at))) FILTER (WHERE a.started_at IS NOT NULL AND t.created_at IS NOT NULL) AS averageWaitingTime,
-            AVG(EXTRACT(EPOCH FROM (a.finished_at - a.started_at))) FILTER (WHERE a.started_at IS NOT NULL AND a.finished_at IS NOT NULL) AS averageServiceTime
-        FROM tb_attendances a
-        RIGHT JOIN tb_tickets t ON a.ticket_id = t.ticket_id
-    """, nativeQuery = true)
-    GetAttendanceStatisticsDto getAttendanceStatistics();
+            s.name AS serviceName,
+
+            COUNT(a.attendance_id) AS totalAttendances,
+
+            ROUND(
+                (
+                    COUNT(a.attendance_id)::numeric
+                    /
+                    NULLIF(SUM(COUNT(a.attendance_id)) OVER (), 0)
+                ) * 100,
+                2
+            ) AS percentage
+
+        FROM tb_service_management s
+
+        LEFT JOIN tb_tickets t
+            ON t.service_management_id = s.service_management_id
+
+        LEFT JOIN tb_attendances a
+            ON a.ticket_id = t.ticket_id
+
+        GROUP BY
+            s.service_management_id,
+            s.name
+
+        ORDER BY
+            totalAttendances DESC
+        """,
+            nativeQuery = true)
+    List<ResponseAttendancesByServiceStatisticsDto> countAttendancesByService();
+
+    // Atendimentos por hora
+    @Query(value = """
+        WITH hours AS (
+            SELECT generate_series(0, 23) AS hour
+        )
+
+        SELECT
+            h.hour,
+
+            COALESCE(COUNT(a.attendance_id), 0) AS totalAttendances
+
+        FROM hours h
+
+        LEFT JOIN tb_attendances a
+            ON EXTRACT(HOUR FROM a.started_at) = h.hour
+
+        GROUP BY
+            h.hour
+
+        ORDER BY
+            h.hour
+        """,
+            nativeQuery = true)
+    List<ResponseAttendancesByHourStatisticsDto> countAttendancesByHour();
+
+    // Atendimentos por departamento
+    @Query(value = """
+        SELECT
+            d.name AS departmentName,
+
+            COUNT(a.attendance_id) AS totalAttendances,
+
+            ROUND(
+                (
+                    COUNT(a.attendance_id)::numeric
+                    /
+                    NULLIF(SUM(COUNT(a.attendance_id)) OVER (), 0)
+                ) * 100,
+                2
+            ) AS percentage
+
+        FROM tb_departments d
+
+        LEFT JOIN tb_service_management s
+            ON s.department_id = d.department_id
+
+        LEFT JOIN tb_tickets t
+            ON t.service_management_id = s.service_management_id
+
+        LEFT JOIN tb_attendances a
+            ON a.ticket_id = t.ticket_id
+
+        GROUP BY
+            d.department_id,
+            d.name
+
+        ORDER BY
+            totalAttendances DESC
+        """,
+            nativeQuery = true)
+    List<ResponseAttendancesByDepartmentStatisticsDto> countAttendancesByDepartment();
+
+    // Contagem de atendimento aos clientes
+    @Query(value = """
+        SELECT
+            c.name AS username,
+
+            COUNT(a.attendance_id) AS totalAttendances,
+
+            ROUND(
+                (
+                    COUNT(a.attendance_id)::numeric
+                    /
+                    NULLIF(SUM(COUNT(a.attendance_id)) OVER (), 0)
+                ) * 100,
+                2
+            ) AS percentage
+
+        FROM tb_customers c
+
+        LEFT JOIN tb_tickets t
+            ON t.customer_id = c.customer_id
+
+        LEFT JOIN tb_attendances a
+            ON a.ticket_id = t.ticket_id
+
+        GROUP BY
+            c.customer_id,
+            c.name
+
+        ORDER BY
+            totalAttendances DESC
+        """,
+            nativeQuery = true)
+    List<ResponseAttendancesByCustomerStatisticsDto> countAttendancesByCustomer();
 }
