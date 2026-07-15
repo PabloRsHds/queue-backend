@@ -43,20 +43,38 @@ public interface AttendanceRepository extends JpaRepository<Attendance, String> 
 
     // Pegar a média de tempo de espera
     @Query(value = """
-            SELECT
-                AVG(EXTRACT(EPOCH FROM (a.started_at - t.created_at))) FILTER (WHERE a.started_at IS NOT NULL AND t.created_at IS NOT NULL) AS averageWaitingTime
-            FROM tb_attendances a
-            RIGHT JOIN tb_tickets t ON a.ticket_id = t.ticket_id
-            """, nativeQuery = true)
+    SELECT
+        COALESCE(
+            TO_CHAR(
+                (AVG(a.started_at - t.created_at)),
+                'HH24:MI:SS'
+            ),
+            '00:00:00'
+        ) AS averageWaitingTime
+    FROM tb_attendances a
+    INNER JOIN tb_tickets t
+        ON t.ticket_id = a.ticket_id
+    WHERE
+        a.started_at IS NOT NULL
+        AND t.created_at IS NOT NULL
+    """, nativeQuery = true)
     ResponseAverageWaitingTimeStatisticsDto getAverageWaitingTime();
 
     // Pegar a média do tempo de atendimento
     @Query(value = """
-            SELECT
-                AVG(EXTRACT(EPOCH FROM (a.finished_at - a.started_at))) FILTER (WHERE a.started_at IS NOT NULL AND a.finished_at IS NOT NULL) AS averageServiceTime
-            FROM tb_attendances a
-            RIGHT JOIN tb_tickets t ON a.ticket_id = t.ticket_id
-            """, nativeQuery = true)
+    SELECT
+        COALESCE(
+            TO_CHAR(
+                AVG(a.finished_at - a.started_at),
+                'HH24:MI:SS'
+            ),
+            '00:00:00'
+        ) AS averageServiceTime
+    FROM tb_attendances a
+    WHERE
+        a.started_at IS NOT NULL
+        AND a.finished_at IS NOT NULL
+    """, nativeQuery = true)
     ResponseAverageServiceTimeStatisticsDto getAverageServiceTime();
 
     // Média de atendimento do atendente
@@ -64,12 +82,12 @@ public interface AttendanceRepository extends JpaRepository<Attendance, String> 
     SELECT
         u.username AS username,
 
-        ROUND(
-            AVG(
-                EXTRACT(EPOCH FROM (a.finished_at - a.started_at)) / 60
-            )::numeric,
-            2
-        ) AS averageMinutes
+        TO_CHAR(
+            MAKE_INTERVAL(
+                secs => AVG(EXTRACT(EPOCH FROM (a.finished_at - a.started_at)))::int
+            ),
+            'MI:SS'
+        ) AS averageTime
 
     FROM tb_attendances a
 
@@ -85,7 +103,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, String> 
         u.username
 
     ORDER BY
-        averageMinutes ASC
+        AVG(EXTRACT(EPOCH FROM (a.finished_at - a.started_at))) ASC
     """,
             nativeQuery = true)
     List<ResponseAverageAttendanceByUserStatisticsDto> averageAttendanceByUser();
@@ -266,35 +284,35 @@ public interface AttendanceRepository extends JpaRepository<Attendance, String> 
 
     // Contagem de atendimento aos clientes
     @Query(value = """
-        SELECT
-            c.name AS username,
+    SELECT
+        u.username,
 
-            COUNT(a.attendance_id) AS totalAttendances,
+        COUNT(a.attendance_id) AS totalAttendances,
 
-            ROUND(
-                (
-                    COUNT(a.attendance_id)::numeric
-                    /
-                    NULLIF(SUM(COUNT(a.attendance_id)) OVER (), 0)
-                ) * 100,
-                2
-            ) AS percentage
+        ROUND(
+            (
+                COUNT(a.attendance_id)::numeric
+                /
+                NULLIF(SUM(COUNT(a.attendance_id)) OVER (), 0)
+            ) * 100,
+            2
+        ) AS percentage
 
-        FROM tb_customers c
+    FROM tb_users u
 
-        LEFT JOIN tb_tickets t
-            ON t.customer_id = c.customer_id
+    LEFT JOIN tb_attendances a
+        ON a.user_id = u.user_id
 
-        LEFT JOIN tb_attendances a
-            ON a.ticket_id = t.ticket_id
+    WHERE
+        u.role = 'ATTENDANT'
 
-        GROUP BY
-            c.customer_id,
-            c.name
+    GROUP BY
+        u.user_id,
+        u.username
 
-        ORDER BY
-            totalAttendances DESC
-        """,
+    ORDER BY
+        totalAttendances DESC
+    """,
             nativeQuery = true)
     List<ResponseAttendancesByCustomerStatisticsDto> countAttendancesByCustomer();
 }
