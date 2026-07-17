@@ -215,6 +215,12 @@ public class SchedulingService {
         var entity = this.scheduleRepository.findByScheduleId(scheduleId)
                 .orElseThrow(() -> new EntityNotFoundException("Schedule not found"));
 
+
+        if (entity.getTicket() != null && entity.getTicket().getAttendance() != null) {
+            throw new IllegalStateException(
+                    "Não é possível excluir um agendamento, onde o atendimento foi iniciado");
+        }
+
         var updateAt = "";
 
         if (entity.getUpdatedAt() != null ) {

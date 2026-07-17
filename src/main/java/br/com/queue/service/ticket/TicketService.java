@@ -12,6 +12,7 @@ import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.enums.PriorityLevel;
 import br.com.queue.enums.TicketStatus;
+import br.com.queue.repositories.attendance.AttendanceRepository;
 import br.com.queue.repositories.customer.CustomerRepository;
 import br.com.queue.repositories.schedule.ScheduleRepository;
 import br.com.queue.repositories.serviceManagement.ServiceManagementRepository;
@@ -37,8 +38,8 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final CustomerRepository customerRepository;
     private final ServiceManagementRepository serviceManagementRepository;
-    private final UserRepository userRepository;
     private final ScheduleRepository scheduleRepository;
+    private final AttendanceRepository attendanceRepository;
 
     @Transactional
     public ResponseTicketDto createTicket(CreateTicketDto dto) {
@@ -193,6 +194,11 @@ public class TicketService {
                 .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
 
         var response = this.buildResponseTicketDto(entity);
+
+        if (entity.getAttendance() != null) {
+            this.attendanceRepository.delete(entity.getAttendance());
+        }
+
         this.ticketRepository.delete(entity);
 
         return response;
@@ -208,6 +214,12 @@ public class TicketService {
     }
 
     private String generateCode(String prefix, long callNumber) {
+
+        if (callNumber < 10) {
+            return "%s-%02d".formatted(prefix, callNumber);
+        } else if (callNumber < 100) {
+            return "%s-%03d".formatted(prefix, callNumber);
+        }
         return "%s-%03d".formatted(prefix, callNumber);
     }
 
