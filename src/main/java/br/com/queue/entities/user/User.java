@@ -32,7 +32,6 @@ public class User {
     @Column(nullable = false)
     private String surname;
 
-    @Column
     private String phone;
 
     @Column(nullable = false, unique = true)

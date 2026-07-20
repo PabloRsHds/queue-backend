@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,27 +27,22 @@ public class TicketController {
     public ResponseEntity<ResponseTicketDto> createTicket(
             @RequestBody CreateTicketDto dto
     ) {
-
-        var response = this.ticketService.createTicket(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(this.ticketService.createTicket(dto));
     }
 
     @PatchMapping("/call")
     public ResponseEntity<ResponseTicketDto> callTicket(
             @RequestBody CallTicketDto dto
     ) {
-
-        var response = this.ticketService.callTicket(dto);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(this.ticketService.callTicket(dto));
     }
 
     @PatchMapping("/finish")
     public ResponseEntity<ResponseTicketDto> finishTicket(
             @RequestBody FinishTicketDto dto
     ) {
-
-        var response = this.ticketService.finishTicket(dto);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(this.ticketService.finishTicket(dto));
     }
 
     @GetMapping
@@ -54,31 +50,39 @@ public class TicketController {
             @RequestParam int page,
             @RequestParam int size
     ) {
-
-        var response = this.ticketService.getAllTickets(page, size);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(this.ticketService.getAllTickets(page, size));
     }
 
     @GetMapping("/tickets-for-attendance")
-    public ResponseEntity<List<ResponseTicketsForAttendance>> getTicketsForAttendance() {
-        var response = this.ticketService.getTicketsForAttendance();
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Page<ResponseTicketsForAttendance>> getTicketsForAttendance(
+            JwtAuthenticationToken token,
+            int page,
+            int size) {
+        return ResponseEntity.ok(this.ticketService.getTicketsByAttendant(token, page, size));
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<Page<ResponseTicketsForAttendance>> getHistoryTicketsByAttendant(
+            JwtAuthenticationToken token,
+            int page,
+            int size) {
+        return ResponseEntity.ok(this.ticketService.getHistoryTicketsByAttendant(token, page, size));
     }
 
     @GetMapping("/{ticketId}")
     public ResponseEntity<ResponseTicketDto> getTicketById(
             @PathVariable String ticketId
     ) {
-
-        var response = this.ticketService.getTicketById(ticketId);
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(this.ticketService.getTicketById(ticketId));
     }
 
     @DeleteMapping("/{ticketId}")
     public ResponseEntity<ResponseTicketDto> deleteTicket(@PathVariable String ticketId) {
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(this.ticketService.deleteTicket(ticketId));
+    }
 
-        var response = this.ticketService.deleteTicket(ticketId);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+    @PatchMapping("/status/{ticketId}")
+    public ResponseEntity<ResponseTicketDto> cancelTicket(@PathVariable String ticketId) {
+        return ResponseEntity.ok(this.ticketService.cancelTicket(ticketId));
     }
 }

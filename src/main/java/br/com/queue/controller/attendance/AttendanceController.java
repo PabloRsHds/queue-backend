@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,8 +22,8 @@ public class AttendanceController {
     private final AttendanceService attendanceService;
 
     @PostMapping
-    public ResponseEntity<ResponseAttendanceDto> startAttendance(@RequestBody StartAttendanceDto dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(this.attendanceService.startAttendance(dto));
+    public ResponseEntity<ResponseAttendanceDto> startAttendance(JwtAuthenticationToken token, @RequestBody StartAttendanceDto dto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(this.attendanceService.startAttendance(token, dto));
     }
 
     @PatchMapping("/finish")

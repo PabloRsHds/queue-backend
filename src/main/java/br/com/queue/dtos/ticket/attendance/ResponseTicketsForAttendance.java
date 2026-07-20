@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 public record ResponseTicketsForAttendance(
         String ticketId,
         String code,
+        String status,
+        String priority,
         String customerName,
         String serviceManagementName,
         LocalDateTime arrivalTime,

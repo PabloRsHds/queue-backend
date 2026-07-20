@@ -6,6 +6,7 @@ import br.com.queue.dtos.ticket.attendance.ResponseTicketsForAttendance;
 import br.com.queue.dtos.ticket.callTicket.CallTicketDto;
 import br.com.queue.dtos.ticket.create.CreateTicketDto;
 import br.com.queue.dtos.ticket.finishTicket.FinishTicketDto;
+import br.com.queue.entities.attendance.Attendance;
 import br.com.queue.entities.customer.Customer;
 import br.com.queue.entities.schedule.Schedule;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
@@ -17,12 +18,12 @@ import br.com.queue.repositories.customer.CustomerRepository;
 import br.com.queue.repositories.schedule.ScheduleRepository;
 import br.com.queue.repositories.serviceManagement.ServiceManagementRepository;
 import br.com.queue.repositories.ticket.TicketRepository;
-import br.com.queue.repositories.user.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -128,55 +129,149 @@ public class TicketService {
                 ));
     }
 
-    public List<ResponseTicketsForAttendance> getTicketsForAttendance() {
+    public Page<ResponseTicketsForAttendance> getTicketsByAttendant(
+            JwtAuthenticationToken token,
+            int page,
+            int size
+    ) {
 
-        return this.ticketRepository.findAll()
-                .stream()
+        return this.ticketRepository
+                .getTicketsByAttendant(token.getName(), PageRequest.of(page, size))
                 .map(ticket -> {
 
-                    var attendance = ticket.getAttendance();
-
-                    String attendanceTime = "00:00:00";
+                    Attendance attendance = null;
+                    var attendanceTime = "00:00:00";
                     LocalDateTime startedAt = null;
                     LocalDateTime finishedAt = null;
 
-                    if (attendance.getFinishedAt() != null) {
+                    if (ticket.getAttendance() == null) {
+                        
+                    } else {
+                        attendance = ticket.getAttendance();
 
-                        Duration duration = Duration.between(
-                                attendance.getStartedAt(),
-                                attendance.getFinishedAt()
+                        if (attendance.getFinishedAt() != null) {
+                            Duration duration = Duration.between(
+                                    attendance.getStartedAt(),
+                                    attendance.getFinishedAt()
+                            );
+
+                            long seconds = duration.getSeconds();
+
+                            attendanceTime = String.format(
+                                    "%02d:%02d:%02d",
+                                    seconds / 3600,
+                                    (seconds % 3600) / 60,
+                                    seconds % 60
+                            );
+                        }
+
+                        if (attendance.getStartedAt() != null) {
+                            startedAt = attendance.getStartedAt();
+                        }
+
+                        if (attendance.getFinishedAt() != null) {
+                            finishedAt = attendance.getFinishedAt();
+                        }
+
+                        return new ResponseTicketsForAttendance(
+                                ticket.getTicketId(),
+                                ticket.getCode(),
+                                ticket.getStatus().name(),
+                                ticket.getPriority().name(),
+                                ticket.getCustomer().getName(),
+                                ticket.getServiceManagement().getName(),
+                                ticket.getCreatedAt(),
+                                startedAt,
+                                finishedAt,
+                                attendanceTime
                         );
-
-                        long seconds = duration.getSeconds();
-
-                        attendanceTime = String.format(
-                                "%02d:%02d:%02d",
-                                seconds / 3600,
-                                (seconds % 3600) / 60,
-                                seconds % 60
-                        );
-                    }
-
-                    if (attendance.getStartedAt() != null) {
-                        startedAt = attendance.getStartedAt();
-                    }
-
-                    if (attendance.getFinishedAt() != null) {
-                        finishedAt = attendance.getFinishedAt();
                     }
 
                     return new ResponseTicketsForAttendance(
                             ticket.getTicketId(),
                             ticket.getCode(),
+                            ticket.getStatus().name(),
+                            ticket.getPriority().name(),
                             ticket.getCustomer().getName(),
                             ticket.getServiceManagement().getName(),
                             ticket.getCreatedAt(),
-                            startedAt,
-                            finishedAt,
+                            null,
+                            null,
                             attendanceTime
                     );
-                })
-                .toList();
+                });
+    }
+
+    public Page<ResponseTicketsForAttendance> getHistoryTicketsByAttendant(
+            JwtAuthenticationToken token,
+            int page,
+            int size
+    ) {
+        return this.ticketRepository
+                .getHistoryTicketsByAttendant(token.getName(), PageRequest.of(page, size))
+                .map(ticket -> {
+
+                    Attendance attendance = null;
+                    var attendanceTime = "00:00:00";
+                    LocalDateTime startedAt = null;
+                    LocalDateTime finishedAt = null;
+
+                    if (ticket.getAttendance() == null) {
+
+                    } else {
+                        attendance = ticket.getAttendance();
+
+                        if (attendance.getFinishedAt() != null) {
+                            Duration duration = Duration.between(
+                                    attendance.getStartedAt(),
+                                    attendance.getFinishedAt()
+                            );
+
+                            long seconds = duration.getSeconds();
+
+                            attendanceTime = String.format(
+                                    "%02d:%02d:%02d",
+                                    seconds / 3600,
+                                    (seconds % 3600) / 60,
+                                    seconds % 60
+                            );
+                        }
+
+                        if (attendance.getStartedAt() != null) {
+                            startedAt = attendance.getStartedAt();
+                        }
+
+                        if (attendance.getFinishedAt() != null) {
+                            finishedAt = attendance.getFinishedAt();
+                        }
+
+                        return new ResponseTicketsForAttendance(
+                                ticket.getTicketId(),
+                                ticket.getCode(),
+                                ticket.getStatus().name(),
+                                ticket.getPriority().name(),
+                                ticket.getCustomer().getName(),
+                                ticket.getServiceManagement().getName(),
+                                ticket.getCreatedAt(),
+                                startedAt,
+                                finishedAt,
+                                attendanceTime
+                        );
+                    }
+
+                    return new ResponseTicketsForAttendance(
+                            ticket.getTicketId(),
+                            ticket.getCode(),
+                            ticket.getStatus().name(),
+                            ticket.getPriority().name(),
+                            ticket.getCustomer().getName(),
+                            ticket.getServiceManagement().getName(),
+                            ticket.getCreatedAt(),
+                            null,
+                            null,
+                            attendanceTime
+                    );
+                });
     }
 
     public ResponseTicketDto getTicketById(String ticketId) {
@@ -202,6 +297,17 @@ public class TicketService {
         this.ticketRepository.delete(entity);
 
         return response;
+    }
+
+    public ResponseTicketDto cancelTicket(String ticketId) {
+
+        var entity = this.ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
+
+        entity.setStatus(TicketStatus.CANCELED);
+        this.ticketRepository.save(entity);
+
+        return this.buildResponseTicketDto(entity);
     }
 
     public void resetCode(String ticketId) {

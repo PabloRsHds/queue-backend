@@ -17,6 +17,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -30,12 +31,12 @@ public class AttendanceService {
     private final UserRepository userRepository;
 
     @Transactional
-    public ResponseAttendanceDto startAttendance(StartAttendanceDto dto) {
+    public ResponseAttendanceDto startAttendance(JwtAuthenticationToken token, StartAttendanceDto dto) {
 
         var ticket = this.ticketRepository.findById(dto.ticketId())
                 .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
 
-        var user = this.userRepository.findById(dto.userId())
+        var user = this.userRepository.findById(token.getName())
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         if (user.getRole() != Role.ATTENDANT
@@ -55,7 +56,6 @@ public class AttendanceService {
 
         attendance.setTicket(ticket);
         attendance.setUser(user);
-        attendance.setObservation(dto.observation());
         attendance.setStartedAt(LocalDateTime.now());
 
         ticketRepository.save(ticket);
@@ -64,21 +64,18 @@ public class AttendanceService {
         return new ResponseAttendanceDto(
                 attendance.getTicket().getTicketId(),
                 attendance.getTicket().getCode(),
-                attendance.getObservation(),
-                attendance.getResolution(),
-                attendance.getStartedAt(),
-                attendance.getFinishedAt()
+                attendance.getStartedAt()
         );
     }
 
     @Transactional
     public ResponseFinishAttendanceDto finishAttendance(FinishAttendanceDto dto) {
 
-        var attendance = this.attendanceRepository.findByAttendanceId(dto.attendanceId())
-                .orElseThrow(() -> new EntityNotFoundException("Attendance not found"));
-
         var ticket = this.ticketRepository.findByTicketId(dto.ticketId())
                         .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
+
+        var attendance = this.attendanceRepository.findByTicket(ticket)
+                .orElseThrow(() -> new EntityNotFoundException("Attendance not found"));
 
         attendance.setResolution(dto.resolution());
         attendance.setObservation(dto.observation());
