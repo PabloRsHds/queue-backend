@@ -29,9 +29,6 @@ public class Attendance {
     private User user;
 
     @Column(columnDefinition = "TEXT")
-    private String observation;
-
-    @Column(columnDefinition = "TEXT")
     private String resolution;
 
     @Column(name = "started_at")

@@ -78,7 +78,6 @@ public class AttendanceService {
                 .orElseThrow(() -> new EntityNotFoundException("Attendance not found"));
 
         attendance.setResolution(dto.resolution());
-        attendance.setObservation(dto.observation());
         attendance.setFinishedAt(LocalDateTime.now());
 
         ticket.setStatus(TicketStatus.FINISHED);

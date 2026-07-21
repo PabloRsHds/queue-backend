@@ -48,7 +48,7 @@ public class SecurityConfig {
                     // Adicione as rotas do seu ng s --host 0.0.0.0
                     configuration.setAllowedOrigins(List.of(
                             "http://localhost:4200",
-                            "http://192.168.1.2:4200",
+                            "http://192.168.1.9:4200",
                             "http://26.72.151.10:4200",
                             "http://100.113.25.102:4200",
                             "http://54.232.189.113:4200",
