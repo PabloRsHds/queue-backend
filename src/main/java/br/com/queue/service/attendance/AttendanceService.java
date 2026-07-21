@@ -87,7 +87,6 @@ public class AttendanceService {
 
         return new ResponseFinishAttendanceDto(
                 attendance.getResolution(),
-                attendance.getObservation(),
                 attendance.getFinishedAt()
         );
     }
@@ -97,7 +96,6 @@ public class AttendanceService {
                 .map(attendance -> new ResponseAllAttendances(
                         attendance.getTicket().getTicketId(),
                         attendance.getTicket().getCode(),
-                        attendance.getObservation(),
                         attendance.getResolution(),
                         attendance.getStartedAt(),
                         attendance.getFinishedAt()

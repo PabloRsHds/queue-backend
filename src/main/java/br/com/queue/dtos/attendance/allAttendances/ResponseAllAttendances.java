@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 public record ResponseAllAttendances(
         String ticketId,
         String ticketCode,
-        String observation,
         String resolution,
         LocalDateTime startedAt,
         LocalDateTime finishedAt
