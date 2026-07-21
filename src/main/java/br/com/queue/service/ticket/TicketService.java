@@ -304,6 +304,14 @@ public class TicketService {
         var entity = this.ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
 
+        if (entity.getAttendance().getStartedAt() != null) {
+
+            var attendance = entity.getAttendance();
+            attendance.setFinishedAt(LocalDateTime.now());
+
+            this.attendanceRepository.save(attendance);
+        }
+
         entity.setStatus(TicketStatus.CANCELED);
         this.ticketRepository.save(entity);
 
