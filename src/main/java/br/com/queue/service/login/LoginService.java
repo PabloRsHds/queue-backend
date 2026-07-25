@@ -2,21 +2,22 @@ package br.com.queue.service.login;
 
 import br.com.queue.dtos.loginDto.RequestLoginDto;
 import br.com.queue.dtos.loginDto.ResponseUserForLogin;
-import br.com.queue.dtos.tokenDto.RequestTokensDto;
 import br.com.queue.dtos.tokenDto.ResponseTokens;
 import br.com.queue.entities.user.User;
 import br.com.queue.repositories.user.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Objects;
-import java.util.Optional;
 
 @RequiredArgsConstructor
 @Service
@@ -29,13 +30,13 @@ public class LoginService {
 
     // ========================================== LOGIN ==============================================================
 
-    public ResponseTokens login(RequestLoginDto request) {
+    public ResponseTokens login(RequestLoginDto request, HttpServletResponse response) {
 
         // Faço uma verificação para ver se o usuário existe, e também verifico se o e-mail e a senha estão corretos
         var user = this.verifyUser(request.emailOrUsername(), request.password());
 
         // Retorno os tokens caso o usuário exista
-        return this.generateTokens(user.userId(), user.role());
+        return this.generateTokens(user.userId(), user.role(), response);
     }
 
     public ResponseUserForLogin verifyUser(String emailOrUsername, String password) {
@@ -55,9 +56,9 @@ public class LoginService {
     }
 
     // Metodo de geração de tokens e refreshTokens
-    public ResponseTokens generateTokens(String userId, String role) {
+    public ResponseTokens generateTokens(String userId, String role, HttpServletResponse response) {
 
-        var expireToken = LocalDateTime.now().plusHours(1).toInstant(ZoneOffset.of("-03:00"));
+        var expireToken = LocalDateTime.now().plusMinutes(10).toInstant(ZoneOffset.of("-03:00"));
         var now = Instant.now();
 
         var claims = JwtClaimsSet.builder()
@@ -79,13 +80,23 @@ public class LoginService {
                 .build();
 
         var accessToken = this.jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
-        var accessRefreshToken = this.jwtEncoder.encode(JwtEncoderParameters.from(claimsRefresh)).getTokenValue();
+        var refreshToken = this.jwtEncoder.encode(JwtEncoderParameters.from(claimsRefresh)).getTokenValue();
 
-        if (accessToken == null || accessRefreshToken == null) {
+        if (accessToken == null || refreshToken == null) {
             throw new JwtEncodingException("Unable to generate tokens");
         }
 
-        return new ResponseTokens(accessToken, accessRefreshToken);
+        ResponseCookie cookie = ResponseCookie.from("refreshToken", refreshToken)
+                .httpOnly(true)
+                .secure(false) // durante o desenvolvimento
+                .path("/")
+                .maxAge(Duration.ofDays(30))
+                .sameSite("Lax")
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+
+        return new ResponseTokens(accessToken);
     }
     // ================================================================================================================
 
@@ -93,31 +104,17 @@ public class LoginService {
 
     // ======================================== REFRESH TOKENS ========================================================
 
-    public ResponseTokens refreshTokens(RequestTokensDto request) {
+    public ResponseTokens refreshTokens(String refreshToken, HttpServletResponse response) {
 
-        var accessToken = jwtDecoder.decode(request.accessToken());
-        var refreshToken = jwtDecoder.decode(request.refreshToken());
+        var decodeRefreshToken = jwtDecoder.decode(refreshToken);
 
-        // 1. Refresh token deve expirar
-        if (refreshToken.getExpiresAt() == null ||
-                Instant.now().isAfter(refreshToken.getExpiresAt())) {
+        User user = userRepository.findByUserId(decodeRefreshToken.getSubject())
+                .orElseThrow();
 
-            throw new RuntimeException("Invalid or expired refresh token");
-        }
-
-        // 2. Subjects devem bater
-        if (!Objects.equals(refreshToken.getSubject(), accessToken.getSubject())) {
-
-            throw new RuntimeException("Invalid refresh token");
-        }
-
-        // 3. Busca usuário confiável
-        Optional<User> user = this.userRepository.findByUserId(refreshToken.getSubject());
-
-        if (user.isEmpty()) {
-            throw new RuntimeException("User not found!");
-        }
-
-        return this.generateTokens(user.get().getUserId(), user.get().getRole().name());
+        return generateTokens(
+                user.getUserId(),
+                user.getRole().name(),
+                response
+        );
     }
 }

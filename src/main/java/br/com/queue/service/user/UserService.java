@@ -84,29 +84,54 @@ public class UserService {
         var entity = this.userRepository.findByUserId(dto.userId())
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
 
-        Set<ServiceManagement> services = new HashSet<>(
-                this.serviceManagementRepository.findAllByServiceManagementIdIn(dto.serviceIds())
-        );
+        if (dto.username() != null && !dto.username().isBlank()) {
+            entity.setUsername(dto.username());
+        }
 
-        entity.setUsername(dto.username());
-        entity.setName(dto.name());
-        entity.setSurname(dto.surname());
-        entity.setPhone(dto.phone());
-        entity.setEmail(dto.email());
-        entity.setRole(Role.valueOf(dto.role()));
-        entity.setActive(dto.active());
-        entity.setServices(services);
-        entity.setUpdatedAt(LocalDateTime.now());
+        if (dto.name() != null && !dto.name().isBlank()) {
+            entity.setName(dto.name());
+        }
 
-        if (!dto.role().equals("ATTENDANT")) {
-            entity.setCounterNumber(null);
-        } else {
+        if (dto.surname() != null && !dto.surname().isBlank()) {
+            entity.setSurname(dto.surname());
+        }
+
+        if (dto.phone() != null && !dto.phone().isBlank()) {
+            entity.setPhone(dto.phone());
+        }
+
+        if (dto.email() != null && !dto.email().isBlank()) {
+            entity.setEmail(dto.email());
+        }
+
+        if (dto.role() != null && !dto.role().isBlank()) {
+            entity.setRole(Role.valueOf(dto.role()));
+
+            if (!dto.role().equals("ATTENDANT")) {
+                entity.setCounterNumber(null);
+            }
+        }
+
+        if (dto.counterNumber() != null) {
             entity.setCounterNumber(dto.counterNumber());
+        }
+
+        if (dto.active() != null) {
+            entity.setActive(dto.active());
+        }
+
+        if (dto.serviceIds() != null) {
+            Set<ServiceManagement> services = new HashSet<>(
+                    this.serviceManagementRepository.findAllByServiceManagementIdIn(dto.serviceIds())
+            );
+            entity.setServices(services);
         }
 
         if (dto.password() != null && !dto.password().isBlank()) {
             entity.setPassword(passwordEncoder.encode(dto.password()));
         }
+
+        entity.setUpdatedAt(LocalDateTime.now());
 
         this.userRepository.save(entity);
 

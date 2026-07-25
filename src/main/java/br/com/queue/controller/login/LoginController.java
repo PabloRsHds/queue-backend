@@ -1,16 +1,13 @@
 package br.com.queue.controller.login;
 
 import br.com.queue.dtos.loginDto.RequestLoginDto;
-import br.com.queue.dtos.tokenDto.RequestTokensDto;
 import br.com.queue.dtos.tokenDto.ResponseTokens;
 import br.com.queue.service.login.LoginService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
@@ -20,14 +17,20 @@ public class LoginController {
     private final LoginService loginService;
 
     @PostMapping
-    public ResponseEntity<ResponseTokens> login(@Valid @RequestBody RequestLoginDto request) {
-        var tokens = this.loginService.login(request);
-        return ResponseEntity.ok().body(tokens);
+    public ResponseEntity<ResponseTokens> login(
+            @Valid @RequestBody RequestLoginDto request,
+            HttpServletResponse response) {
+
+        var tokens = loginService.login(request, response);
+
+        return ResponseEntity.ok(tokens);
     }
 
     @PostMapping("/refresh-tokens")
-    public ResponseEntity<ResponseTokens> refreshTokens(@RequestBody RequestTokensDto request) {
-        var tokens = this.loginService.refreshTokens(request);
+    public ResponseEntity<ResponseTokens> refreshTokens(
+            @CookieValue("refreshToken") String refreshToken,
+            HttpServletResponse response) {
+        var tokens = this.loginService.refreshTokens(refreshToken, response);
         return ResponseEntity.ok().body(tokens);
     }
 }

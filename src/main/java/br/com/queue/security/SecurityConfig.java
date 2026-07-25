@@ -45,16 +45,32 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(request -> {
 
                     var configuration = new CorsConfiguration();
-                    // Adicione as rotas do seu ng s --host 0.0.0.0
+
                     configuration.setAllowedOrigins(List.of(
                             "http://localhost:4200",
-                            "http://192.168.1.9:4200",
+                            "http://192.168.1.2:4200",
                             "http://26.72.151.10:4200",
                             "http://100.113.25.102:4200",
                             "http://54.232.189.113:4200",
-                            "http://172.27.96.1:4200"));
-                    configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH"));
-                    configuration.setAllowedHeaders(List.of("Content-Type","Authorization"));
+                            "http://172.27.96.1:4200"
+                    ));
+
+                    configuration.setAllowedMethods(List.of(
+                            "GET",
+                            "POST",
+                            "PUT",
+                            "DELETE",
+                            "PATCH",
+                            "OPTIONS"
+                    ));
+
+                    configuration.setAllowedHeaders(List.of(
+                            "Content-Type",
+                            "Authorization"
+                    ));
+
+                    configuration.setAllowCredentials(true);
+
                     return configuration;
                 }))
                 .authorizeHttpRequests(authorize ->

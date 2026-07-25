@@ -56,10 +56,7 @@ public class DepartmentService {
             entity.setName(dto.name());
         }
 
-        if (!dto.description().isBlank()) {
-            entity.setDescription(dto.description());
-        }
-
+        entity.setDescription(dto.description());
         entity.setActive(dto.active());
         entity.setUpdatedAt(LocalDateTime.now());
         this.departmentRepository.save(entity);
