@@ -74,7 +74,10 @@ public class SecurityConfig {
                     return configuration;
                 }))
                 .authorizeHttpRequests(authorize ->
-                        authorize.anyRequest().permitAll());
+                        authorize.requestMatchers(
+                                "/login/**")
+                                .permitAll()
+                                .anyRequest().authenticated());
 
         return http.build();
     }
