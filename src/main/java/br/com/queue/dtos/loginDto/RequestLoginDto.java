@@ -5,6 +5,8 @@ import jakarta.validation.constraints.Size;
 
 public record RequestLoginDto(
 
+        String unitId,
+
         String emailOrUsername,
 
         @Size(min = 8, max = 30, message = "The password must be between 8 and 30 characters")

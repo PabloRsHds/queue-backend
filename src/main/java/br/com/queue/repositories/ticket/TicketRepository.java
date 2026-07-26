@@ -15,16 +15,23 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
 
     Optional<Ticket> findTicketByScheduleScheduleId(String scheduleId);
 
-    // Criar a sequência no database
-    // CREATE SEQUENCE ticket_call_number_seq
-    // START 1;
-    @Query(value = "SELECT nextval('ticket_call_number_seq')", nativeQuery = true)
-    Long getNextCallNumber();
+    @Query(value = """
+        SELECT *
+        FROM tb_tickets t
+        WHERE t.ticket_id = :ticketId
+        AND t.unit_id = :unitId
+        """,
+            nativeQuery = true)
+    Optional<Ticket> findByTicketIdAndUnitId(
+            @Param("ticketId") String ticketId,
+            @Param("unitId") String unitId
+    );
 
     @Query(value = """
         SELECT t.*
         FROM tb_tickets t
-        WHERE t.service_management_id IN (
+        WHERE t.unit_id = :unitId
+        AND t.service_management_id IN (
             SELECT us.service_management_id
             FROM tb_user_services us
             WHERE us.user_id = :userId
@@ -37,10 +44,11 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
             END,
             t.created_at ASC
         """,
-                countQuery = """
+            countQuery = """
         SELECT COUNT(*)
         FROM tb_tickets t
-        WHERE t.service_management_id IN (
+        WHERE t.unit_id = :unitId
+        AND t.service_management_id IN (
             SELECT us.service_management_id
             FROM tb_user_services us
             WHERE us.user_id = :userId
@@ -49,6 +57,7 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
         """,
             nativeQuery = true)
     Page<Ticket> getTicketsByAttendant(
+            @Param("unitId") String unitId,
             @Param("userId") String userId,
             Pageable pageable
     );
@@ -58,7 +67,8 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
         FROM tb_tickets t
         LEFT JOIN tb_attendances a
             ON a.ticket_id = t.ticket_id
-        WHERE t.service_management_id IN (
+        WHERE t.unit_id = :unitId
+        AND t.service_management_id IN (
             SELECT us.service_management_id
             FROM tb_user_services us
             WHERE us.user_id = :userId
@@ -80,12 +90,13 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
                 ELSE t.created_at
             END DESC
         """,
-                countQuery = """
+            countQuery = """
         SELECT COUNT(*)
         FROM tb_tickets t
         LEFT JOIN tb_attendances a
             ON a.ticket_id = t.ticket_id
-        WHERE t.service_management_id IN (
+        WHERE t.unit_id = :unitId
+        AND t.service_management_id IN (
             SELECT us.service_management_id
             FROM tb_user_services us
             WHERE us.user_id = :userId
@@ -104,6 +115,7 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
         """,
             nativeQuery = true)
     Page<Ticket> getHistoryTicketsByAttendant(
+            @Param("unitId") String unitId,
             @Param("userId") String userId,
             Pageable pageable
     );

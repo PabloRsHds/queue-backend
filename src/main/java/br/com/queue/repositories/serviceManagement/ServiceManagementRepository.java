@@ -1,11 +1,7 @@
 package br.com.queue.repositories.serviceManagement;
 
-import br.com.queue.dtos.department.statistics.ResponseCountTotalDepartmentsStatisticsDto;
-import br.com.queue.dtos.department.statistics.ResponseDepartmentPercentagesStatisticsDto;
-import br.com.queue.dtos.department.statistics.ResponseDepartmentsCreatedByMonthStatisticsDto;
 import br.com.queue.dtos.serviceManagement.ResponseServiceManagementDto;
 import br.com.queue.dtos.serviceManagement.statistics.*;
-import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,7 +16,7 @@ import java.util.Set;
 
 public interface ServiceManagementRepository extends JpaRepository<ServiceManagement, String> {
 
-    // Importação de extenção para acentuações no sql
+    // Importacao de extensao para acentuacoes no sql
     // CREATE EXTENSION IF NOT EXISTS unaccent;
 
     Optional<ServiceManagement> findByServiceManagementId(String serviceManagementId);
@@ -47,7 +43,9 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
         FROM tb_service_management s
         INNER JOIN tb_departments d
             ON d.department_id = s.department_id
-        WHERE (
+            AND d.unit_id = :unitId
+        WHERE s.unit_id = :unitId
+        AND (
             :search IS NULL
             OR :search = ''
             OR unaccent(LOWER(s.name))
@@ -64,7 +62,9 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
         FROM tb_service_management s
         INNER JOIN tb_departments d
             ON d.department_id = s.department_id
-        WHERE (
+            AND d.unit_id = :unitId
+        WHERE s.unit_id = :unitId
+        AND (
             :search IS NULL
             OR :search = ''
             OR unaccent(LOWER(s.name))
@@ -77,80 +77,90 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
         """,
             nativeQuery = true
     )
-    Page<ResponseServiceManagementDto> findAllWithSearch(@Param("search") String search, Pageable pageable);
+    Page<ResponseServiceManagementDto> findAllWithSearch(
+            @Param("unitId") String unitId,
+            @Param("search") String search,
+            Pageable pageable
+    );
 
-    // Statistics
+    // ============================================================
+    // STATISTICS
+    // ============================================================
+
     @Query(value = """
-            SELECT
-                COUNT(*) AS totalElements,
-                COUNT(*) FILTER (WHERE active = true) AS totalElementsActive,
-                COUNT(*) FILTER (WHERE active = false) AS totalElementsInactive
-            FROM tb_service_management
-            """,
+        SELECT
+            COUNT(*) AS totalElements,
+            COUNT(*) FILTER (WHERE active = true) AS totalElementsActive,
+            COUNT(*) FILTER (WHERE active = false) AS totalElementsInactive
+        FROM tb_service_management s
+        WHERE s.unit_id = :unitId
+        """,
             nativeQuery = true)
-    ResponseCountTotalServicesStatisticsDto countTotalServicesStatisticsDto();
+    ResponseCountTotalServicesStatisticsDto countTotalServicesStatisticsDto(@Param("unitId") String unitId);
 
     @Query(value = """
-            SELECT
-                ROUND(
-                    (
-                        COUNT(*) FILTER (WHERE active = true)::numeric
-                        / NULLIF(COUNT(*), 0)
-                    ) * 100,
-                    2
-                ) AS percentageActive,
-                ROUND(
-                    (
-                        COUNT(*) FILTER (WHERE active = false)::numeric
-                        / NULLIF(COUNT(*), 0)
-                    ) * 100,
-                    2
-                ) AS percentageInactive
-            FROM tb_service_management
-            """,
+        SELECT
+            ROUND(
+                (
+                    COUNT(*) FILTER (WHERE active = true)::numeric
+                    / NULLIF(COUNT(*), 0)
+                ) * 100,
+                2
+            ) AS percentageActive,
+            ROUND(
+                (
+                    COUNT(*) FILTER (WHERE active = false)::numeric
+                    / NULLIF(COUNT(*), 0)
+                ) * 100,
+                2
+            ) AS percentageInactive
+        FROM tb_service_management s
+        WHERE s.unit_id = :unitId
+        """,
             nativeQuery = true
     )
-    ResponseServicePercentagesStatisticsDto getServicePercentagesStatisticsDto();
+    ResponseServicePercentagesStatisticsDto getServicePercentagesStatisticsDto(@Param("unitId") String unitId);
 
     @Query(value = """
-            WITH months AS (
-                SELECT generate_series(1, 12) AS month
-            )
-        
-            SELECT
-                m.month,
-        
-                CASE m.month
-                    WHEN 1 THEN 'Jan'
-                    WHEN 2 THEN 'Fev'
-                    WHEN 3 THEN 'Mar'
-                    WHEN 4 THEN 'Abr'
-                    WHEN 5 THEN 'Mai'
-                    WHEN 6 THEN 'Jun'
-                    WHEN 7 THEN 'Jul'
-                    WHEN 8 THEN 'Ago'
-                    WHEN 9 THEN 'Set'
-                    WHEN 10 THEN 'Out'
-                    WHEN 11 THEN 'Nov'
-                    WHEN 12 THEN 'Dez'
-                END AS monthName,
-        
-                COALESCE(COUNT(s.service_management_id), 0) AS totalServices
-        
-            FROM months m
-        
-            LEFT JOIN tb_service_management s
-                ON EXTRACT(MONTH FROM s.created_at) = m.month
-                AND EXTRACT(YEAR FROM s.created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
-        
-            GROUP BY
-                m.month
-        
-            ORDER BY
-                m.month
-            """,
+        WITH months AS (
+            SELECT generate_series(1, 12) AS month
+        )
+    
+        SELECT
+            m.month,
+    
+            CASE m.month
+                WHEN 1 THEN 'Jan'
+                WHEN 2 THEN 'Fev'
+                WHEN 3 THEN 'Mar'
+                WHEN 4 THEN 'Abr'
+                WHEN 5 THEN 'Mai'
+                WHEN 6 THEN 'Jun'
+                WHEN 7 THEN 'Jul'
+                WHEN 8 THEN 'Ago'
+                WHEN 9 THEN 'Set'
+                WHEN 10 THEN 'Out'
+                WHEN 11 THEN 'Nov'
+                WHEN 12 THEN 'Dez'
+            END AS monthName,
+    
+            COALESCE(COUNT(s.service_management_id), 0) AS totalServices
+    
+        FROM months m
+    
+        LEFT JOIN tb_service_management s
+            ON EXTRACT(MONTH FROM s.created_at) = m.month
+            AND EXTRACT(YEAR FROM s.created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND s.unit_id = :unitId
+    
+        GROUP BY
+            m.month
+    
+        ORDER BY
+            m.month
+        """,
             nativeQuery = true)
-    List<ResponseServicesCreatedByMonthStatisticsDto> countServicesCreatedByMonth();
+    List<ResponseServicesCreatedByMonthStatisticsDto> countServicesCreatedByMonth(@Param("unitId") String unitId);
 
     @Query(value = """
         SELECT
@@ -171,6 +181,9 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
 
         LEFT JOIN tb_service_management s
             ON s.department_id = d.department_id
+            AND s.unit_id = :unitId
+
+        WHERE d.unit_id = :unitId
 
         GROUP BY
             d.department_id,
@@ -179,7 +192,7 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
         ORDER BY totalServices DESC
         """,
             nativeQuery = true)
-    List<ResponseServicesByDepartmentStatisticsDto> countServicesByDepartmentStatistics();
+    List<ResponseServicesByDepartmentStatisticsDto> countServicesByDepartmentStatistics(@Param("unitId") String unitId);
 
     @Query(value = """
         SELECT
@@ -202,6 +215,8 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
         LEFT JOIN tb_user_services us
             ON us.service_management_id = s.service_management_id
 
+        WHERE s.unit_id = :unitId
+
         GROUP BY
 
             s.service_management_id,
@@ -210,8 +225,7 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
         ORDER BY totalUsers DESC
         """,
             nativeQuery = true)
-    List<ResponseUsersByServiceStatisticsDto> countUsersByServiceStatistics();
-
+    List<ResponseUsersByServiceStatisticsDto> countUsersByServiceStatistics(@Param("unitId") String unitId);
 
     @Query(value = """
         SELECT
@@ -234,6 +248,8 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
         LEFT JOIN tb_schedules sc
             ON sc.service_management_id = s.service_management_id
 
+        WHERE s.unit_id = :unitId
+
         GROUP BY
 
             s.service_management_id,
@@ -242,7 +258,7 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
         ORDER BY totalSchedules DESC
         """,
             nativeQuery = true)
-    List<ResponseSchedulesByServiceStatisticsDto> countSchedulesByServiceStatistics();
+    List<ResponseSchedulesByServiceStatisticsDto> countSchedulesByServiceStatistics(@Param("unitId") String unitId);
 
     @Query(value = """
         SELECT
@@ -265,6 +281,8 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
         LEFT JOIN tb_tickets t
             ON t.service_management_id = s.service_management_id
 
+        WHERE s.unit_id = :unitId
+
         GROUP BY
 
             s.service_management_id,
@@ -273,5 +291,5 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
         ORDER BY totalTickets DESC
         """,
             nativeQuery = true)
-    List<ResponseTicketsByServiceStatisticsDto> countTicketsByServiceStatistics();
+    List<ResponseTicketsByServiceStatisticsDto> countTicketsByServiceStatistics(@Param("unitId") String unitId);
 }

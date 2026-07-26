@@ -12,11 +12,14 @@ import br.com.queue.repositories.customer.CustomerRepository;
 import br.com.queue.repositories.schedule.ScheduleRepository;
 import br.com.queue.repositories.serviceManagement.ServiceManagementRepository;
 import br.com.queue.repositories.ticket.TicketRepository;
+import br.com.queue.repositories.unit.UnitRepository;
+import br.com.queue.service.unit.UnitContext;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -30,10 +33,13 @@ public class SchedulingService {
     private final ScheduleRepository scheduleRepository;
     private final CustomerRepository customerRepository;
     private final ServiceManagementRepository serviceManagementRepository;
+    private final UnitContext unitContext;
     private final TicketRepository ticketRepository;
 
     @Transactional
-    public ResponseScheduleDto createSchedule(CreateScheduleDto dto) {
+    public ResponseScheduleDto createSchedule(JwtAuthenticationToken token, CreateScheduleDto dto) {
+
+        var unit = this.unitContext.getCurrentUnit(token);
 
         var customer = this.customerRepository.findByCustomerId(dto.customerId())
                 .orElseThrow(() -> new EntityNotFoundException("Customer not found"));
@@ -49,6 +55,7 @@ public class SchedulingService {
         entity.setScheduledDate(dto.scheduledDate());
         entity.setStatus(ScheduleStatus.SCHEDULED);
         entity.setCreatedAt(LocalDateTime.now());
+        entity.setUnit(unit);
 
         this.scheduleRepository.save(entity);
 
@@ -154,13 +161,21 @@ public class SchedulingService {
         );
     }
 
-    public Page<ResponseAllSchedulesDto> getAllSchedules(int page, int size, String search, LocalDate scheduleDate) {
+    public Page<ResponseAllSchedulesDto> getAllSchedules(
+            JwtAuthenticationToken token,
+            int page,
+            int size,
+            String search,
+            LocalDate scheduleDate) {
+
+        var unit = this.unitContext.getCurrentUnit(token);
 
         String normalizedSearch = (search == null || search.isBlank())
                 ? null
                 : search.trim();
 
         return this.scheduleRepository.findAllWithSearch(
+                unit.getUnitId(),
                 normalizedSearch,
                 scheduleDate,
                 PageRequest.of(page, size)
@@ -262,19 +277,21 @@ public class SchedulingService {
     }
 
     // Estatísticas
-    public ResponseScheduleDashBoardDto getScheduleStatistics() {
+    public ResponseScheduleDashBoardDto getScheduleStatistics(JwtAuthenticationToken token) {
+
+        var unit = this.unitContext.getCurrentUnit(token);
 
         return new ResponseScheduleDashBoardDto(
 
-                this.scheduleRepository.countTotalSchedulesStatisticsDto(),
-                this.scheduleRepository.getSchedulePercentagesStatisticsDto(),
-                this.scheduleRepository.countSchedulesCreatedByMonth(),
-                this.scheduleRepository.countSchedulesCreatedByWeek(),
-                this.scheduleRepository.countSchedulesCreatedByDay(),
-                this.scheduleRepository.countSchedulesByDepartment(),
-                this.scheduleRepository.countSchedulesByService(),
-                this.scheduleRepository.countSchedulesByPriority(),
-                this.scheduleRepository.countSchedulesByHour()
+                this.scheduleRepository.countTotalSchedulesStatisticsDto(unit.getUnitId()),
+                this.scheduleRepository.getSchedulePercentagesStatisticsDto(unit.getUnitId()),
+                this.scheduleRepository.countSchedulesCreatedByMonth(unit.getUnitId()),
+                this.scheduleRepository.countSchedulesCreatedByWeek(unit.getUnitId()),
+                this.scheduleRepository.countSchedulesCreatedByDay(unit.getUnitId()),
+                this.scheduleRepository.countSchedulesByDepartment(unit.getUnitId()),
+                this.scheduleRepository.countSchedulesByService(unit.getUnitId()),
+                this.scheduleRepository.countSchedulesByPriority(unit.getUnitId()),
+                this.scheduleRepository.countSchedulesByHour(unit.getUnitId())
         );
     }
 }

@@ -11,6 +11,7 @@ import br.com.queue.entities.user.User;
 import br.com.queue.enums.Role;
 import br.com.queue.repositories.serviceManagement.ServiceManagementRepository;
 import br.com.queue.repositories.user.UserRepository;
+import br.com.queue.service.unit.UnitContext;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -32,10 +33,12 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final ServiceManagementRepository serviceManagementRepository;
+    private final UnitContext unitContext;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public ResponseUserDto createUser(CreateUserDto dto) {
+    public ResponseUserDto createUser(JwtAuthenticationToken token,CreateUserDto dto) {
+        var unit = this.unitContext.getCurrentUnit(token);
 
         Set<ServiceManagement> services =
                 serviceManagementRepository.findAllByServiceManagementIdIn(dto.serviceIds());
@@ -51,6 +54,7 @@ public class UserService {
         entity.setCounterNumber(dto.counterNumber());
         entity.setActive(true);
         entity.setServices(services);
+        entity.setUnit(unit);
         entity.setCreatedAt(LocalDateTime.now());
 
         this.userRepository.save(entity);
@@ -150,13 +154,17 @@ public class UserService {
         );
     }
 
-    public Page<ResponseAllUsersDto> getAllUsers(int page, int size, String search) {
+    public Page<ResponseAllUsersDto> getAllUsers(JwtAuthenticationToken token ,int page, int size, String search) {
+
+        var unit = this.unitContext.getCurrentUnit(token);
 
         String normalizedSearch = (search == null || search.isBlank())
                 ? null
                 : search.trim();
 
-        return this.userRepository.findAllWithSearch(normalizedSearch,
+        return this.userRepository.findAllWithSearch(
+                unit.getUnitId(),
+                normalizedSearch,
                 PageRequest.of(page, size));
     }
 
@@ -256,13 +264,15 @@ public class UserService {
         return response;
     }
 
-    public ResponseUserDashBoardDto getStatistics() {
+    public ResponseUserDashBoardDto getStatistics(JwtAuthenticationToken token) {
 
-        var countTotalUsersStatistics = this.userRepository.countTotalUsersStatisticsDto();
-        var userPercentagesStatistics = this.userRepository.getUserPercentagesStatisticsDto();
-        var usersCreatedByMonthStatistics = this.userRepository.countUsersCreatedByMonth();
-        var countServicesByUsers = this.userRepository.countServicesByUserStatistics();
-        var countRoleByUsers = this.userRepository.countUsersByRoleStatistics();
+        var unit = this.unitContext.getCurrentUnit(token);
+
+        var countTotalUsersStatistics = this.userRepository.countTotalUsersStatisticsDto(unit.getUnitId());
+        var userPercentagesStatistics = this.userRepository.getUserPercentagesStatisticsDto(unit.getUnitId());
+        var usersCreatedByMonthStatistics = this.userRepository.countUsersCreatedByMonth(unit.getUnitId());
+        var countServicesByUsers = this.userRepository.countServicesByUserStatistics(unit.getUnitId());
+        var countRoleByUsers = this.userRepository.countUsersByRoleStatistics(unit.getUnitId());
 
         return new ResponseUserDashBoardDto(
                 countTotalUsersStatistics,

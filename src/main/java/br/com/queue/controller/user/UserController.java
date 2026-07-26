@@ -1,6 +1,5 @@
 package br.com.queue.controller.user;
 
-import br.com.queue.dtos.statistics.ResponseUserStatisticsDto;
 import br.com.queue.dtos.user.ResponseUserDto;
 import br.com.queue.dtos.user.create.CreateUserDto;
 import br.com.queue.dtos.user.get_user.ResponseUserInfoDto;
@@ -24,10 +23,11 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<ResponseUserDto> createUser(
+            JwtAuthenticationToken token,
             @RequestBody CreateUserDto dto
     ) {
 
-        var response = this.userService.createUser(dto);
+        var response = this.userService.createUser(token, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -42,12 +42,13 @@ public class UserController {
 
     @GetMapping
     public ResponseEntity<Page<ResponseAllUsersDto>> getAllUsers(
+            JwtAuthenticationToken token,
             @RequestParam int page,
             @RequestParam int size,
             @RequestParam(required = false) String search
     ) {
 
-        var response = this.userService.getAllUsers(page, size, search);
+        var response = this.userService.getAllUsers(token, page, size, search);
         return ResponseEntity.ok(response);
     }
 
@@ -77,9 +78,9 @@ public class UserController {
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<ResponseUserDashBoardDto> getStatistics() {
+    public ResponseEntity<ResponseUserDashBoardDto> getStatistics(JwtAuthenticationToken token) {
 
-        var response = this.userService.getStatistics();
+        var response = this.userService.getStatistics(token);
         return ResponseEntity.ok(response);
     }
 }

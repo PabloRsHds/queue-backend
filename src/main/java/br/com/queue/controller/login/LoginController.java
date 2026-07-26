@@ -26,6 +26,12 @@ public class LoginController {
         return ResponseEntity.ok(tokens);
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletResponse response) {
+        this.loginService.logout(response);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/refresh-tokens")
     public ResponseEntity<ResponseTokens> refreshTokens(
             @CookieValue("refreshToken") String refreshToken,

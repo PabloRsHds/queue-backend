@@ -18,6 +18,7 @@ import br.com.queue.repositories.customer.CustomerRepository;
 import br.com.queue.repositories.schedule.ScheduleRepository;
 import br.com.queue.repositories.serviceManagement.ServiceManagementRepository;
 import br.com.queue.repositories.ticket.TicketRepository;
+import br.com.queue.service.unit.UnitContext;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,6 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -39,11 +39,14 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final CustomerRepository customerRepository;
     private final ServiceManagementRepository serviceManagementRepository;
+    private final UnitContext unitContext;
     private final ScheduleRepository scheduleRepository;
     private final AttendanceRepository attendanceRepository;
 
     @Transactional
-    public ResponseTicketDto createTicket(CreateTicketDto dto) {
+    public ResponseTicketDto createTicket(JwtAuthenticationToken token,CreateTicketDto dto) {
+
+        var unit = this.unitContext.getCurrentUnit(token);
 
         Optional<Schedule> scheduleEntity = this.scheduleRepository.findById(dto.scheduleId());
         Optional<Customer> customerEntity = this.customerRepository.findByCustomerId(dto.customerId());
@@ -71,7 +74,9 @@ public class TicketService {
             return buildResponseTicketDto(ticket);
         }
 
-        Long nextCallNumber = ticketRepository.getNextCallNumber();
+        var nextCallNumber = serviceManagement.getLastTicketNumber() + 1;
+        serviceManagement.setLastTicketNumber(nextCallNumber);
+        serviceManagementRepository.save(serviceManagement);
 
         var entity = new Ticket();
         entity.setCallNumber(nextCallNumber);
@@ -82,6 +87,7 @@ public class TicketService {
         entity.setStatus(TicketStatus.WAITING);
         entity.setCreatedAt(LocalDateTime.now());
         entity.setSchedule(schedule);
+        entity.setUnit(unit);
 
         this.ticketRepository.save(entity);
 
@@ -135,8 +141,13 @@ public class TicketService {
             int size
     ) {
 
+        var unit = this.unitContext.getCurrentUnit(token);
+
         return this.ticketRepository
-                .getTicketsByAttendant(token.getName(), PageRequest.of(page, size))
+                .getTicketsByAttendant(
+                        unit.getUnitId(),
+                        token.getName(),
+                        PageRequest.of(page, size))
                 .map(ticket -> {
 
                     Attendance attendance = null;
@@ -207,8 +218,14 @@ public class TicketService {
             int page,
             int size
     ) {
+
+        var unit = this.unitContext.getCurrentUnit(token);
+
         return this.ticketRepository
-                .getHistoryTicketsByAttendant(token.getName(), PageRequest.of(page, size))
+                .getHistoryTicketsByAttendant(
+                        unit.getUnitId(),
+                        token.getName(),
+                        PageRequest.of(page, size))
                 .map(ticket -> {
 
                     Attendance attendance = null;

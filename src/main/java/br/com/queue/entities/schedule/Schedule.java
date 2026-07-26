@@ -3,6 +3,7 @@ package br.com.queue.entities.schedule;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.entities.customer.Customer;
+import br.com.queue.entities.unit.Unit;
 import br.com.queue.enums.PriorityLevel;
 import br.com.queue.enums.ScheduleStatus;
 import jakarta.persistence.*;
@@ -50,4 +51,8 @@ public class Schedule {
 
     @OneToOne(mappedBy = "schedule", fetch = FetchType.LAZY)
     private Ticket ticket;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_id", nullable = false)
+    private Unit unit;
 }

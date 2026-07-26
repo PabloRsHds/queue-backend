@@ -4,6 +4,7 @@ public record ResponseUserForLogin(
 
         String userId,
         String password,
-        String role
+        String role,
+        String unitId
 ) {
 }

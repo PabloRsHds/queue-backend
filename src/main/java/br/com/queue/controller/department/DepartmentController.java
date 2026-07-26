@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,9 +25,11 @@ public class DepartmentController {
     private final DepartmentService departmentService;
 
     @PostMapping
-    public ResponseEntity<ResponseDepartmentDto> createDepartment(@RequestBody @Valid CreateDepartmentDto dto) {
+    public ResponseEntity<ResponseDepartmentDto> createDepartment(
+            JwtAuthenticationToken token,
+            @RequestBody @Valid CreateDepartmentDto dto) {
 
-        var response = this.departmentService.createDepartment(dto);
+        var response = this.departmentService.createDepartment(token, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -39,12 +42,13 @@ public class DepartmentController {
 
     @GetMapping
     public ResponseEntity<Page<ResponseDepartmentDto>> getAllDepartments(
+            JwtAuthenticationToken token,
             @RequestParam int page,
             @RequestParam int size,
             @RequestParam(required = false) String search
     ) {
 
-        var response = this.departmentService.getAllDepartments(page, size, search);
+        var response = this.departmentService.getAllDepartments(token, page, size, search);
         return ResponseEntity.ok(response);
     }
 
@@ -70,9 +74,11 @@ public class DepartmentController {
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<ResponseDepartmentDashBoardDto> getStatistics() {
+    public ResponseEntity<ResponseDepartmentDashBoardDto> getStatistics(
+            JwtAuthenticationToken token
+    ) {
 
-        var response = this.departmentService.getStatistics();
+        var response = this.departmentService.getStatistics(token);
         return ResponseEntity.ok(response);
     }
 }

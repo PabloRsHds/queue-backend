@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,10 +26,11 @@ public class ServiceManagementController {
 
     @PostMapping
     public ResponseEntity<ResponseServiceManagementDto> createServiceManagement(
+            JwtAuthenticationToken token,
             @RequestBody CreateServiceManagementDto dto
     ) {
 
-        var response = this.serviceManagementService.createServiceManagement(dto);
+        var response = this.serviceManagementService.createServiceManagement(token, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -43,12 +45,13 @@ public class ServiceManagementController {
 
     @GetMapping
     public ResponseEntity<Page<ResponseServiceManagementDto>> getAllServicesManagement(
+            JwtAuthenticationToken token,
             @RequestParam int page,
             @RequestParam int size,
             @RequestParam(required = false) String search
     ) {
 
-        var response = this.serviceManagementService.getAllServicesManagement(page, size, search);
+        var response = this.serviceManagementService.getAllServicesManagement(token, page, size, search);
         return ResponseEntity.ok(response);
     }
 
@@ -75,9 +78,10 @@ public class ServiceManagementController {
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<ResponseServiceDashBoardDto> getStatistics() {
+    public ResponseEntity<ResponseServiceDashBoardDto> getStatistics(
+            JwtAuthenticationToken token) {
 
-        var response = this.serviceManagementService.getStatistics();
+        var response = this.serviceManagementService.getStatistics(token);
         return ResponseEntity.ok(response);
     }
 }

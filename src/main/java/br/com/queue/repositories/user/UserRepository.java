@@ -1,9 +1,5 @@
 package br.com.queue.repositories.user;
 
-import br.com.queue.dtos.department.statistics.ResponseCountTotalDepartmentsStatisticsDto;
-import br.com.queue.dtos.department.statistics.ResponseDepartmentPercentagesStatisticsDto;
-import br.com.queue.dtos.department.statistics.ResponseDepartmentsCreatedByMonthStatisticsDto;
-import br.com.queue.dtos.statistics.ResponseUserStatisticsDto;
 import br.com.queue.dtos.user.metrics.*;
 import br.com.queue.dtos.user.users.ResponseAllUsersDto;
 import br.com.queue.entities.user.User;
@@ -17,7 +13,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-public interface  UserRepository extends JpaRepository<User, String> {
+public interface UserRepository extends JpaRepository<User, String> {
 
     Optional<User> findByUserId(String userId);
 
@@ -35,7 +31,8 @@ public interface  UserRepository extends JpaRepository<User, String> {
         u.role::TEXT AS role,
         u.active AS active
     FROM tb_users u
-    WHERE (
+    WHERE u.unit_id = :unitId
+    AND (
         :search IS NULL
         OR :search = ''
         OR unaccent(LOWER(u.username))
@@ -52,7 +49,8 @@ public interface  UserRepository extends JpaRepository<User, String> {
             countQuery = """
     SELECT COUNT(*)
     FROM tb_users u
-    WHERE (
+    WHERE u.unit_id = :unitId
+    AND (
         :search IS NULL
         OR :search = ''
         OR unaccent(LOWER(u.username))
@@ -67,7 +65,11 @@ public interface  UserRepository extends JpaRepository<User, String> {
     """,
             nativeQuery = true
     )
-    Page<ResponseAllUsersDto> findAllWithSearch(@Param("search") String search, Pageable pageable);
+    Page<ResponseAllUsersDto> findAllWithSearch(
+            @Param("unitId") String unitId,
+            @Param("search") String search,
+            Pageable pageable
+    );
 
     @Query("""
         SELECT u FROM User u
@@ -75,7 +77,10 @@ public interface  UserRepository extends JpaRepository<User, String> {
     """)
     Optional<User> findByEmailOrUsername(@Param("input") String input);
 
-    // Métricas
+    // ============================================================
+    // METRICAS
+    // ============================================================
+
     @Query(value = """
         SELECT
             COUNT(*) AS totalElements,
@@ -92,73 +97,75 @@ public interface  UserRepository extends JpaRepository<User, String> {
                 WHERE role = 'ADMIN'
             ) AS admins
 
-        FROM tb_users
+        FROM tb_users u
+        WHERE u.unit_id = :unitId
         """,
             nativeQuery = true)
-    ResponseCountTotalUsersStatisticsDto countTotalUsersStatisticsDto();
-
+    ResponseCountTotalUsersStatisticsDto countTotalUsersStatisticsDto(@Param("unitId") String unitId);
 
     @Query(value = """
-            SELECT
-                ROUND(
-                    (
-                        COUNT(*) FILTER (WHERE active = true)::numeric
-                        / NULLIF(COUNT(*), 0)
-                    ) * 100,
-                    2
-                ) AS percentageActive,
-                ROUND(
-                    (
-                        COUNT(*) FILTER (WHERE active = false)::numeric
-                        / NULLIF(COUNT(*), 0)
-                    ) * 100,
-                    2
-                ) AS percentageInactive
-            FROM tb_users
-            """,
+        SELECT
+            ROUND(
+                (
+                    COUNT(*) FILTER (WHERE active = true)::numeric
+                    / NULLIF(COUNT(*), 0)
+                ) * 100,
+                2
+            ) AS percentageActive,
+            ROUND(
+                (
+                    COUNT(*) FILTER (WHERE active = false)::numeric
+                    / NULLIF(COUNT(*), 0)
+                ) * 100,
+                2
+            ) AS percentageInactive
+        FROM tb_users u
+        WHERE u.unit_id = :unitId
+        """,
             nativeQuery = true
     )
-    ResponseUserPercentagesStatisticsDto getUserPercentagesStatisticsDto();
+    ResponseUserPercentagesStatisticsDto getUserPercentagesStatisticsDto(@Param("unitId") String unitId);
 
     @Query(value = """
-            WITH months AS (
-                SELECT generate_series(1, 12) AS month
-            )
-        
-            SELECT
-                m.month,
-        
-                CASE m.month
-                    WHEN 1 THEN 'Jan'
-                    WHEN 2 THEN 'Fev'
-                    WHEN 3 THEN 'Mar'
-                    WHEN 4 THEN 'Abr'
-                    WHEN 5 THEN 'Mai'
-                    WHEN 6 THEN 'Jun'
-                    WHEN 7 THEN 'Jul'
-                    WHEN 8 THEN 'Ago'
-                    WHEN 9 THEN 'Set'
-                    WHEN 10 THEN 'Out'
-                    WHEN 11 THEN 'Nov'
-                    WHEN 12 THEN 'Dez'
-                END AS monthName,
-        
-                COALESCE(COUNT(u.user_id), 0) AS totalUsers
-        
-            FROM months m
-        
-            LEFT JOIN tb_users u
-                ON EXTRACT(MONTH FROM u.created_at) = m.month
-                AND EXTRACT(YEAR FROM u.created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
-        
-            GROUP BY
-                m.month
-        
-            ORDER BY
-                m.month
-            """,
+        WITH months AS (
+            SELECT generate_series(1, 12) AS month
+        )
+    
+        SELECT
+            m.month,
+    
+            CASE m.month
+                WHEN 1 THEN 'Jan'
+                WHEN 2 THEN 'Fev'
+                WHEN 3 THEN 'Mar'
+                WHEN 4 THEN 'Abr'
+                WHEN 5 THEN 'Mai'
+                WHEN 6 THEN 'Jun'
+                WHEN 7 THEN 'Jul'
+                WHEN 8 THEN 'Ago'
+                WHEN 9 THEN 'Set'
+                WHEN 10 THEN 'Out'
+                WHEN 11 THEN 'Nov'
+                WHEN 12 THEN 'Dez'
+            END AS monthName,
+    
+            COALESCE(COUNT(u.user_id), 0) AS totalUsers
+    
+        FROM months m
+    
+        LEFT JOIN tb_users u
+            ON EXTRACT(MONTH FROM u.created_at) = m.month
+            AND EXTRACT(YEAR FROM u.created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND u.unit_id = :unitId
+    
+        GROUP BY
+            m.month
+    
+        ORDER BY
+            m.month
+        """,
             nativeQuery = true)
-    List<ResponseUsersCreatedByMonthStatisticsDto> countUsersCreatedByMonth();
+    List<ResponseUsersCreatedByMonthStatisticsDto> countUsersCreatedByMonth(@Param("unitId") String unitId);
 
     @Query(value = """
         SELECT
@@ -177,6 +184,7 @@ public interface  UserRepository extends JpaRepository<User, String> {
             ) AS percentage
 
         FROM tb_users u
+        WHERE u.unit_id = :unitId
 
         GROUP BY
             u.role
@@ -185,7 +193,7 @@ public interface  UserRepository extends JpaRepository<User, String> {
             totalUsers DESC
         """,
             nativeQuery = true)
-    List<ResponseUsersByRoleStatisticsDto> countUsersByRoleStatistics();
+    List<ResponseUsersByRoleStatisticsDto> countUsersByRoleStatistics(@Param("unitId") String unitId);
 
     @Query(value = """
         SELECT
@@ -199,6 +207,8 @@ public interface  UserRepository extends JpaRepository<User, String> {
         LEFT JOIN tb_user_services us
             ON us.user_id = u.user_id
 
+        WHERE u.unit_id = :unitId
+
         GROUP BY
 
             u.user_id,
@@ -209,5 +219,5 @@ public interface  UserRepository extends JpaRepository<User, String> {
             totalServices DESC
         """,
             nativeQuery = true)
-    List<ResponseServicesByUserStatisticsDto> countServicesByUserStatistics();
+    List<ResponseServicesByUserStatisticsDto> countServicesByUserStatistics(@Param("unitId") String unitId);
 }

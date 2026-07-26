@@ -2,6 +2,7 @@ package br.com.queue.entities.user;
 
 import br.com.queue.entities.attendance.Attendance;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
+import br.com.queue.entities.unit.Unit;
 import br.com.queue.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
@@ -34,7 +35,6 @@ public class User {
 
     private String phone;
 
-    @Column(nullable = false, unique = true)
     private String email;
 
     @Column(nullable = false)
@@ -66,4 +66,8 @@ public class User {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_id")
+    private Unit unit;
 }

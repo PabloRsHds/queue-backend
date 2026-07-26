@@ -1,6 +1,7 @@
 package br.com.queue.entities.attendance;
 
 import br.com.queue.entities.ticket.Ticket;
+import br.com.queue.entities.unit.Unit;
 import br.com.queue.entities.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -36,4 +37,8 @@ public class Attendance {
 
     @Column(name = "finished_at")
     private LocalDateTime finishedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_id", nullable = false)
+    private Unit unit;
 }

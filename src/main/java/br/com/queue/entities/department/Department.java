@@ -1,6 +1,7 @@
 package br.com.queue.entities.department;
 
 import br.com.queue.entities.serviceManagement.ServiceManagement;
+import br.com.queue.entities.unit.Unit;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -35,4 +36,8 @@ public class Department {
 
     @OneToMany(mappedBy = "department", cascade = CascadeType.ALL)
     private List<ServiceManagement> services = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_id", nullable = false)
+    private Unit unit;
 }

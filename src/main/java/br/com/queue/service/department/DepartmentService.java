@@ -10,11 +10,14 @@ import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.department.Department;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.repositories.department.DepartmentRepository;
+import br.com.queue.repositories.unit.UnitRepository;
+import br.com.queue.service.unit.UnitContext;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -26,15 +29,19 @@ import java.util.List;
 public class DepartmentService {
 
     private final DepartmentRepository departmentRepository;
+    private final UnitContext unitContext;
 
     @Transactional
-    public ResponseDepartmentDto createDepartment(CreateDepartmentDto dto) {
+    public ResponseDepartmentDto createDepartment(JwtAuthenticationToken token, CreateDepartmentDto dto) {
+
+        var unit = this.unitContext.getCurrentUnit(token);
 
         var entity = new Department();
 
         entity.setName(dto.name());
         entity.setDescription(dto.description());
         entity.setActive(true);
+        entity.setUnit(unit);
 
         this.departmentRepository.save(entity);
 
@@ -69,13 +76,20 @@ public class DepartmentService {
         );
     }
 
-    public Page<ResponseDepartmentDto> getAllDepartments(int page, int size, String search) {
+    public Page<ResponseDepartmentDto> getAllDepartments(
+            JwtAuthenticationToken token,
+            int page,
+            int size,
+            String search) {
+
+        var unit = this.unitContext.getCurrentUnit(token);
 
         String normalizedSearch = (search == null || search.isBlank())
                 ? null
                 : search.trim();
 
         return this.departmentRepository.findAllWithSearch(
+                unit.getUnitId(),
                 normalizedSearch,
                 PageRequest.of(page, size)
         );
@@ -91,7 +105,7 @@ public class DepartmentService {
 
     public ResponseGetDepartment getDepartmentById(String departmentId) {
 
-        Department department = this.departmentRepository.findByDepartmentId(departmentId)
+        var department = this.departmentRepository.findByDepartmentId(departmentId)
                 .orElseThrow(() -> new EntityNotFoundException("Departamento não encontrado"));
 
         var services = department.getServices().stream().map(ServiceManagement::getName).toList();
@@ -133,12 +147,14 @@ public class DepartmentService {
         return response;
     }
 
-    public ResponseDepartmentDashBoardDto getStatistics() {
+    public ResponseDepartmentDashBoardDto getStatistics(JwtAuthenticationToken token) {
 
-        var totalDepartment = this.departmentRepository.countTotalDepartmentsStatisticsDto();
-        var countServicesByDepartments = this.departmentRepository.countServicesByDepartmentStatisticsDto();
-        var departmentPercentages = this.departmentRepository.getDepartmentPercentagesStatisticsDto();
-        var departmentsCreatedByMonth = this.departmentRepository.countDepartmentsCreatedByMonth();
+        var unit = this.unitContext.getCurrentUnit(token);
+
+        var totalDepartment = this.departmentRepository.countTotalDepartmentsStatisticsDto(unit.getUnitId());
+        var countServicesByDepartments = this.departmentRepository.countServicesByDepartmentStatisticsDto(unit.getUnitId());
+        var departmentPercentages = this.departmentRepository.getDepartmentPercentagesStatisticsDto(unit.getUnitId());
+        var departmentsCreatedByMonth = this.departmentRepository.countDepartmentsCreatedByMonth(unit.getUnitId());
 
         return new ResponseDepartmentDashBoardDto(
                 totalDepartment,

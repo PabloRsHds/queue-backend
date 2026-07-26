@@ -7,12 +7,12 @@ import br.com.queue.dtos.customer.getCustomer.ResponseCustomerById;
 import br.com.queue.dtos.customer.getCustomer.ResponseGetCustomerIdsAndNames;
 import br.com.queue.dtos.customer.statistics.ResponseCustomerDashBoardDto;
 import br.com.queue.dtos.customer.update.UpdateCustomerDto;
-import br.com.queue.dtos.user.metrics.ResponseUserDashBoardDto;
 import br.com.queue.service.customer.CustomerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,9 +25,11 @@ public class CustomerController {
     private final CustomerService customerService;
 
     @PostMapping
-    public ResponseEntity<ResponseCustomerDto> createCustomer(@RequestBody CreateCustomerDto dto) {
+    public ResponseEntity<ResponseCustomerDto> createCustomer(
+            JwtAuthenticationToken token,
+            @RequestBody CreateCustomerDto dto) {
 
-        var response = this.customerService.registerCustomer(dto);
+        var response = this.customerService.registerCustomer(token, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -40,12 +42,13 @@ public class CustomerController {
 
     @GetMapping
     public ResponseEntity<Page<ResponseAllCustomersDto>> getAllCustomers(
+            JwtAuthenticationToken token,
             @RequestParam int page,
             @RequestParam int size,
             @RequestParam(required = false) String search
     ) {
 
-        var response = this.customerService.getAllCustomers(page, size, search);
+        var response = this.customerService.getAllCustomers(token, page, size, search);
         return ResponseEntity.ok(response);
     }
 
@@ -71,9 +74,11 @@ public class CustomerController {
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<ResponseCustomerDashBoardDto> getStatistics() {
+    public ResponseEntity<ResponseCustomerDashBoardDto> getStatistics(
+            JwtAuthenticationToken token
+    ) {
 
-        var response = this.customerService.getStatistics();
+        var response = this.customerService.getStatistics(token);
         return ResponseEntity.ok(response);
     }
 }

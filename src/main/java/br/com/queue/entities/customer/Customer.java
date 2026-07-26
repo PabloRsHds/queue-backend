@@ -2,6 +2,7 @@ package br.com.queue.entities.customer;
 
 import br.com.queue.entities.schedule.Schedule;
 import br.com.queue.entities.ticket.Ticket;
+import br.com.queue.entities.unit.Unit;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -47,4 +48,8 @@ public class Customer {
 
     @OneToMany(mappedBy = "customer", fetch = FetchType.LAZY)
     private List<Schedule> schedules = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_id", nullable = false)
+    private Unit unit;
 }

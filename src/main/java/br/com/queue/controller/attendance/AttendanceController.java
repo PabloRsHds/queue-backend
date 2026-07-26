@@ -42,7 +42,9 @@ public class AttendanceController {
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<ResponseAttendanceDashboardDto> getAttendanceStatistics() {
-        return ResponseEntity.ok(this.attendanceService.getAttendanceStatistics());
+    public ResponseEntity<ResponseAttendanceDashboardDto> getAttendanceStatistics(
+            JwtAuthenticationToken token
+    ) {
+        return ResponseEntity.ok(this.attendanceService.getAttendanceStatistics(token));
     }
 }

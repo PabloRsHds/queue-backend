@@ -12,6 +12,7 @@ import br.com.queue.enums.TicketStatus;
 import br.com.queue.repositories.attendance.AttendanceRepository;
 import br.com.queue.repositories.ticket.TicketRepository;
 import br.com.queue.repositories.user.UserRepository;
+import br.com.queue.service.unit.UnitContext;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -29,11 +30,14 @@ public class AttendanceService {
     private final AttendanceRepository attendanceRepository;
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
+    private final UnitContext unitContext;
 
     @Transactional
     public ResponseAttendanceDto startAttendance(JwtAuthenticationToken token, StartAttendanceDto dto) {
 
-        var ticket = this.ticketRepository.findById(dto.ticketId())
+        var unit = this.unitContext.getCurrentUnit(token);
+
+        var ticket = this.ticketRepository.findByTicketIdAndUnitId(dto.ticketId(), unit.getUnitId())
                 .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
 
         var user = this.userRepository.findById(token.getName())
@@ -111,29 +115,22 @@ public class AttendanceService {
         this.attendanceRepository.delete(attendance);
     }
 
-    public ResponseAttendanceDashboardDto getAttendanceStatistics() {
+    public ResponseAttendanceDashboardDto getAttendanceStatistics(JwtAuthenticationToken token) {
+
+        var unit = this.unitContext.getCurrentUnit(token);
 
         return new ResponseAttendanceDashboardDto(
 
-                attendanceRepository.countTotalAttendances(),
-
-                attendanceRepository.getAverageWaitingTime(),
-
-                attendanceRepository.getAverageServiceTime(),
-
-                attendanceRepository.averageAttendanceByUser(),
-
-                attendanceRepository.countAttendancesCreatedByMonth(),
-
-                attendanceRepository.countAttendancesByWeek(),
-
-                attendanceRepository.countAttendancesByService(),
-
-                attendanceRepository.countAttendancesByHour(),
-
-                attendanceRepository.countAttendancesByDepartment(),
-
-                attendanceRepository.countAttendancesByCustomer()
+                attendanceRepository.countTotalAttendances(unit.getUnitId()),
+                attendanceRepository.getAverageWaitingTime(unit.getUnitId()),
+                attendanceRepository.getAverageServiceTime(unit.getUnitId()),
+                attendanceRepository.averageAttendanceByUser(unit.getUnitId()),
+                attendanceRepository.countAttendancesCreatedByMonth(unit.getUnitId()),
+                attendanceRepository.countAttendancesByWeek(unit.getUnitId()),
+                attendanceRepository.countAttendancesByService(unit.getUnitId()),
+                attendanceRepository.countAttendancesByHour(unit.getUnitId()),
+                attendanceRepository.countAttendancesByDepartment(unit.getUnitId()),
+                attendanceRepository.countAttendancesByCustomer(unit.getUnitId())
 
         );
     }

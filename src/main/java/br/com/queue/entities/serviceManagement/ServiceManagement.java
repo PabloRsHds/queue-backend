@@ -1,6 +1,7 @@
 package br.com.queue.entities.serviceManagement;
 
 import br.com.queue.entities.ticket.Ticket;
+import br.com.queue.entities.unit.Unit;
 import br.com.queue.entities.user.User;
 import br.com.queue.entities.department.Department;
 import br.com.queue.entities.schedule.Schedule;
@@ -42,6 +43,8 @@ public class ServiceManagement {
     @OneToMany(mappedBy = "serviceManagement", fetch = FetchType.LAZY)
     private List<Ticket> tickets = new ArrayList<>();
 
+    private Long lastTicketNumber = 0L;
+
     @OneToMany(mappedBy = "serviceManagement", fetch = FetchType.LAZY)
     private List<Schedule> schedules = new ArrayList<>();
 
@@ -57,4 +60,8 @@ public class ServiceManagement {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_id", nullable = false)
+    private Unit unit;
 }

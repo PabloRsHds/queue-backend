@@ -33,8 +33,10 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
     FROM tb_schedules s
     INNER JOIN tb_customers c
         ON c.customer_id = s.customer_id
+        AND c.unit_id = :unitId
     INNER JOIN tb_service_management sm
         ON sm.service_management_id = s.service_management_id
+        AND sm.unit_id = :unitId
     WHERE (
         :search IS NULL
         OR :search = ''
@@ -62,8 +64,10 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
     FROM tb_schedules s
     INNER JOIN tb_customers c
         ON c.customer_id = s.customer_id
+        AND c.unit_id = :unitId
     INNER JOIN tb_service_management sm
         ON sm.service_management_id = s.service_management_id
+        AND sm.unit_id = :unitId
     WHERE (
         :search IS NULL
         OR :search = ''
@@ -87,13 +91,17 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
     """,
             nativeQuery = true
     )
-    Page<ResponseAllSchedulesDto> findAllWithSearch(@Param("search") String search,
-                                                    @Param("scheduleDate") LocalDate scheduleDate,
-                                                    Pageable pageable);
+    Page<ResponseAllSchedulesDto> findAllWithSearch(
+            @Param("unitId") String unitId,
+            @Param("search") String search,
+            @Param("scheduleDate") LocalDate scheduleDate,
+            Pageable pageable
+    );
 
-    // Novas queries
+    // ============================================================
+    // STATISTICS
+    // ============================================================
 
-    // TOTAL
     @Query(value = """
     SELECT
 
@@ -115,12 +123,14 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
             WHERE status = 'ABSENT'
         ) AS absent
 
-    FROM tb_schedules
+    FROM tb_schedules s
+    INNER JOIN tb_service_management sm
+        ON sm.service_management_id = s.service_management_id
+        AND sm.unit_id = :unitId
     """,
             nativeQuery = true)
-    ResponseCountTotalSchedulesStatisticsDto countTotalSchedulesStatisticsDto();
+    ResponseCountTotalSchedulesStatisticsDto countTotalSchedulesStatisticsDto(@Param("unitId") String unitId);
 
-    // PORCENTAGEM
     @Query(value = """
     SELECT
 
@@ -148,12 +158,14 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
             2
         ) AS absent
 
-    FROM tb_schedules
+    FROM tb_schedules s
+    INNER JOIN tb_service_management sm
+        ON sm.service_management_id = s.service_management_id
+        AND sm.unit_id = :unitId
     """,
             nativeQuery = true)
-    ResponseSchedulePercentagesStatisticsDto getSchedulePercentagesStatisticsDto();
+    ResponseSchedulePercentagesStatisticsDto getSchedulePercentagesStatisticsDto(@Param("unitId") String unitId);
 
-    // Total de agendamentos do mês
     @Query(value = """
         WITH months AS (
             SELECT generate_series(1, 12) AS month
@@ -189,6 +201,10 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
             ON EXTRACT(MONTH FROM s.created_at) = m.month
             AND EXTRACT(YEAR FROM s.created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
 
+        LEFT JOIN tb_service_management sm
+            ON sm.service_management_id = s.service_management_id
+            AND sm.unit_id = :unitId
+
         GROUP BY
             m.month
 
@@ -196,9 +212,8 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
             m.month
         """,
             nativeQuery = true)
-    List<ResponseSchedulesCreatedByMonthStatisticsDto> countSchedulesCreatedByMonth();
+    List<ResponseSchedulesCreatedByMonthStatisticsDto> countSchedulesCreatedByMonth(@Param("unitId") String unitId);
 
-    // agendamentos da semana
     @Query(value = """
     WITH week_days AS (
 
@@ -234,6 +249,10 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
     LEFT JOIN tb_schedules s
         ON DATE(s.created_at) = w.day
 
+    LEFT JOIN tb_service_management sm
+        ON sm.service_management_id = s.service_management_id
+        AND sm.unit_id = :unitId
+
     GROUP BY
         w.day
 
@@ -241,9 +260,8 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
         w.day
     """,
             nativeQuery = true)
-    List<ResponseSchedulesCreatedByWeekStatisticsDto> countSchedulesCreatedByWeek();
+    List<ResponseSchedulesCreatedByWeekStatisticsDto> countSchedulesCreatedByWeek(@Param("unitId") String unitId);
 
-    // Agendamentos do dia
     @Query(value = """
         SELECT
             COUNT(*) FILTER (WHERE s.status = 'ABSENT' AND DATE(s.scheduled_date) = CURRENT_DATE) AS absentCustomer,
@@ -252,11 +270,13 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
             COUNT(*) FILTER (WHERE DATE(s.scheduled_date) = CURRENT_DATE) AS schedulingOfDay
    
         FROM tb_schedules s
+        INNER JOIN tb_service_management sm
+            ON sm.service_management_id = s.service_management_id
+            AND sm.unit_id = :unitId
         """,
             nativeQuery = true)
-    ResponseSchedulesCreatedByDayStatisticsDto countSchedulesCreatedByDay();
+    ResponseSchedulesCreatedByDayStatisticsDto countSchedulesCreatedByDay(@Param("unitId") String unitId);
 
-    // agendamentos por departamento
     @Query(value = """
     SELECT
 
@@ -277,9 +297,12 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
 
     LEFT JOIN tb_service_management sm
         ON sm.department_id = d.department_id
+        AND sm.unit_id = :unitId
 
     LEFT JOIN tb_schedules s
         ON s.service_management_id = sm.service_management_id
+
+    WHERE d.unit_id = :unitId
 
     GROUP BY
         d.department_id,
@@ -289,9 +312,8 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
         totalSchedules DESC
     """,
             nativeQuery = true)
-    List<ResponseSchedulesByDepartmentStatisticsDto> countSchedulesByDepartment();
+    List<ResponseSchedulesByDepartmentStatisticsDto> countSchedulesByDepartment(@Param("unitId") String unitId);
 
-    // Agendamentos por serviço
     @Query(value = """
     SELECT
 
@@ -313,6 +335,8 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
     LEFT JOIN tb_schedules s
         ON s.service_management_id = sm.service_management_id
 
+    WHERE sm.unit_id = :unitId
+
     GROUP BY
         sm.service_management_id,
         sm.name
@@ -321,9 +345,8 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
         totalSchedules DESC
     """,
             nativeQuery = true)
-    List<ResponseSchedulesByServiceStatisticsDto> countSchedulesByService();
+    List<ResponseSchedulesByServiceStatisticsDto> countSchedulesByService(@Param("unitId") String unitId);
 
-    // Agendamento por prioridade
     @Query(value = """
     SELECT
 
@@ -340,7 +363,10 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
             2
         ) AS percentage
 
-    FROM tb_schedules
+    FROM tb_schedules s
+    INNER JOIN tb_service_management sm
+        ON sm.service_management_id = s.service_management_id
+        AND sm.unit_id = :unitId
 
     GROUP BY
         priority
@@ -349,9 +375,8 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
         totalSchedules DESC
     """,
             nativeQuery = true)
-    List<ResponseSchedulesByPriorityStatisticsDto> countSchedulesByPriority();
+    List<ResponseSchedulesByPriorityStatisticsDto> countSchedulesByPriority(@Param("unitId") String unitId);
 
-    // Horários de agendamentos mais procurados
     @Query(value = """
     WITH hours AS (
         SELECT generate_series(0, 23) AS hour
@@ -369,6 +394,10 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
     LEFT JOIN tb_schedules s
         ON EXTRACT(HOUR FROM s.scheduled_date) = h.hour
 
+    LEFT JOIN tb_service_management sm
+        ON sm.service_management_id = s.service_management_id
+        AND sm.unit_id = :unitId
+
     GROUP BY
         h.hour
 
@@ -376,5 +405,5 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
         h.hour
     """,
             nativeQuery = true)
-    List<ResponseSchedulesByHourStatisticsDto> countSchedulesByHour();
+    List<ResponseSchedulesByHourStatisticsDto> countSchedulesByHour(@Param("unitId") String unitId);
 }

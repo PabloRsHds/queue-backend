@@ -7,14 +7,15 @@ import br.com.queue.dtos.customer.getCustomer.ResponseCustomerById;
 import br.com.queue.dtos.customer.getCustomer.ResponseGetCustomerIdsAndNames;
 import br.com.queue.dtos.customer.statistics.ResponseCustomerDashBoardDto;
 import br.com.queue.dtos.customer.update.UpdateCustomerDto;
-import br.com.queue.dtos.user.metrics.ResponseUserDashBoardDto;
 import br.com.queue.entities.customer.Customer;
 import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.repositories.customer.CustomerRepository;
+import br.com.queue.service.unit.UnitContext;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,9 +28,12 @@ import java.util.List;
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
+    private final UnitContext unitContext;
 
     @Transactional
-    public ResponseCustomerDto registerCustomer(CreateCustomerDto dto) {
+    public ResponseCustomerDto registerCustomer(JwtAuthenticationToken token, CreateCustomerDto dto) {
+
+        var unit = this.unitContext.getCurrentUnit(token);
 
         var entity = new Customer();
 
@@ -39,6 +43,7 @@ public class CustomerService {
         entity.setPhone(dto.phone());
         entity.setEmail(dto.email());
         entity.setCreatedAt(LocalDateTime.now());
+        entity.setUnit(unit);
 
         this.customerRepository.save(entity);
 
@@ -89,13 +94,21 @@ public class CustomerService {
         );
     }
 
-    public Page<ResponseAllCustomersDto> getAllCustomers(int page, int size, String search) {
+    public Page<ResponseAllCustomersDto> getAllCustomers(
+            JwtAuthenticationToken token,
+            int page,
+            int size,
+            String search) {
+
+        var unit = this.unitContext.getCurrentUnit(token);
 
         String normalizedSearch = (search == null || search.isBlank())
                 ? null
                 : search.trim();
 
-        return this.customerRepository.findAllWithSearch(normalizedSearch,
+        return this.customerRepository.findAllWithSearch(
+                unit.getUnitId(),
+                normalizedSearch,
                 PageRequest.of(page, size));
     }
 
@@ -166,10 +179,12 @@ public class CustomerService {
         return response;
     }
 
-    public ResponseCustomerDashBoardDto getStatistics() {
+    public ResponseCustomerDashBoardDto getStatistics(JwtAuthenticationToken token) {
 
-        var countTotalCustomersStatistics = this.customerRepository.countTotalCustomerStatisticsDto();
-        var customersCreatedByMonthStatistics = this.customerRepository.countCustomersCreatedByMonth();
+        var unit = this.unitContext.getCurrentUnit(token);
+
+        var countTotalCustomersStatistics = this.customerRepository.countTotalCustomerStatisticsDto(unit.getUnitId());
+        var customersCreatedByMonthStatistics = this.customerRepository.countCustomersCreatedByMonth(unit.getUnitId());
 
         return new ResponseCustomerDashBoardDto(
                 countTotalCustomersStatistics,

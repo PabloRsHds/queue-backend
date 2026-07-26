@@ -4,6 +4,7 @@ import br.com.queue.entities.attendance.Attendance;
 import br.com.queue.entities.customer.Customer;
 import br.com.queue.entities.schedule.Schedule;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
+import br.com.queue.entities.unit.Unit;
 import br.com.queue.enums.PriorityLevel;
 import br.com.queue.enums.TicketStatus;
 import jakarta.persistence.*;
@@ -61,4 +62,8 @@ public class Ticket {
 
     @Column(name = "called_at")
     private LocalDateTime calledAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unit_id", nullable = false)
+    private Unit unit;
 }

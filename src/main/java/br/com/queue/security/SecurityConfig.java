@@ -7,6 +7,7 @@ import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -74,9 +75,9 @@ public class SecurityConfig {
                     return configuration;
                 }))
                 .authorizeHttpRequests(authorize ->
-                        authorize.requestMatchers(
-                                "/login/**")
-                                .permitAll()
+                        authorize
+                                .requestMatchers("/login/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/units").permitAll()
                                 .anyRequest().authenticated());
 
         return http.build();

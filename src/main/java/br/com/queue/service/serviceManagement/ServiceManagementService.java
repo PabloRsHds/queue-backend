@@ -5,17 +5,17 @@ import br.com.queue.dtos.serviceManagement.create.CreateServiceManagementDto;
 import br.com.queue.dtos.serviceManagement.getServiceDto.ResponseGetServiceByIdDto;
 import br.com.queue.dtos.serviceManagement.list_service.ResponseServicesForCreatedUser;
 import br.com.queue.dtos.serviceManagement.statistics.ResponseServiceDashBoardDto;
-import br.com.queue.dtos.serviceManagement.statistics.ResponseServicesCreatedByMonthStatisticsDto;
 import br.com.queue.dtos.serviceManagement.update.UpdateServiceManagementDto;
-import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.repositories.department.DepartmentRepository;
 import br.com.queue.repositories.serviceManagement.ServiceManagementRepository;
+import br.com.queue.service.unit.UnitContext;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -28,9 +28,12 @@ public class ServiceManagementService {
 
     private final ServiceManagementRepository serviceRepository;
     private final DepartmentRepository departmentRepository;
+    private final UnitContext unitContext;
 
     @Transactional
-    public ResponseServiceManagementDto createServiceManagement(CreateServiceManagementDto dto) {
+    public ResponseServiceManagementDto createServiceManagement(JwtAuthenticationToken token, CreateServiceManagementDto dto) {
+
+        var unit = this.unitContext.getCurrentUnit(token);
 
         var department = this.departmentRepository.findByName(dto.departmentName())
                 .orElseThrow(() -> new EntityNotFoundException("Departamento não encontrado"));
@@ -42,6 +45,7 @@ public class ServiceManagementService {
         entity.setDescription(dto.description());
         entity.setDepartment(department);
         entity.setActive(true);
+        entity.setUnit(unit);
         this.serviceRepository.save(entity);
 
         return new ResponseServiceManagementDto(
@@ -84,15 +88,20 @@ public class ServiceManagementService {
     }
 
     public Page<ResponseServiceManagementDto> getAllServicesManagement(
+            JwtAuthenticationToken token,
             int page,
             int size,
             String search) {
+
+        var unit = this.unitContext.getCurrentUnit(token);
 
         String normalizedSearch = (search == null || search.isBlank())
                 ? null
                 : search.trim();
 
-        return this.serviceRepository.findAllWithSearch(normalizedSearch,
+        return this.serviceRepository.findAllWithSearch(
+                unit.getUnitId(),
+                normalizedSearch,
                 PageRequest.of(page, size));
     }
 
@@ -161,15 +170,17 @@ public class ServiceManagementService {
         return response;
     }
 
-    public ResponseServiceDashBoardDto getStatistics() {
+    public ResponseServiceDashBoardDto getStatistics(JwtAuthenticationToken token) {
 
-        var countTotalServices = this.serviceRepository.countTotalServicesStatisticsDto();
-        var getPercentagesByServices = this.serviceRepository.getServicePercentagesStatisticsDto();
-        var countServicesCreatedByMonth = this.serviceRepository.countServicesCreatedByMonth();
-        var countServicesByDepartments = this.serviceRepository.countServicesByDepartmentStatistics();
-        var countUsersByService = this.serviceRepository.countUsersByServiceStatistics();
-        var countSchedulesByService = this.serviceRepository.countSchedulesByServiceStatistics();
-        var countTicketsByService = this.serviceRepository.countTicketsByServiceStatistics();
+        var unit = this.unitContext.getCurrentUnit(token);
+
+        var countTotalServices = this.serviceRepository.countTotalServicesStatisticsDto(unit.getUnitId());
+        var getPercentagesByServices = this.serviceRepository.getServicePercentagesStatisticsDto(unit.getUnitId());
+        var countServicesCreatedByMonth = this.serviceRepository.countServicesCreatedByMonth(unit.getUnitId());
+        var countServicesByDepartments = this.serviceRepository.countServicesByDepartmentStatistics(unit.getUnitId());
+        var countUsersByService = this.serviceRepository.countUsersByServiceStatistics(unit.getUnitId());
+        var countSchedulesByService = this.serviceRepository.countSchedulesByServiceStatistics(unit.getUnitId());
+        var countTicketsByService = this.serviceRepository.countTicketsByServiceStatistics(unit.getUnitId());
 
         return new ResponseServiceDashBoardDto(
                 countTotalServices,

@@ -25,10 +25,11 @@ public class TicketController {
 
     @PostMapping
     public ResponseEntity<ResponseTicketDto> createTicket(
+            JwtAuthenticationToken token,
             @RequestBody CreateTicketDto dto
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(this.ticketService.createTicket(dto));
+                .body(this.ticketService.createTicket(token, dto));
     }
 
     @PatchMapping("/call")
