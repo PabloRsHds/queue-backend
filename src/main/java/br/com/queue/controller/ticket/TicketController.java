@@ -32,18 +32,26 @@ public class TicketController {
                 .body(this.ticketService.createTicket(token, dto));
     }
 
-    @PatchMapping("/call")
-    public ResponseEntity<ResponseTicketDto> callTicket(
-            @RequestBody CallTicketDto dto
-    ) {
-        return ResponseEntity.ok(this.ticketService.callTicket(dto));
-    }
-
     @PatchMapping("/finish")
     public ResponseEntity<ResponseTicketDto> finishTicket(
             @RequestBody FinishTicketDto dto
     ) {
         return ResponseEntity.ok(this.ticketService.finishTicket(dto));
+    }
+
+    @PatchMapping("/call/{ticketId}")
+    public ResponseEntity<ResponseTicketDto> callTicket(
+            @PathVariable String ticketId
+    ) {
+        return ResponseEntity.ok(this.ticketService.callTicket(ticketId));
+    }
+
+    @PatchMapping("/call/customer/{ticketId}")
+    public ResponseEntity<ResponseTicketDto> callCustomer(
+            @PathVariable String ticketId
+    ) {
+
+        return ResponseEntity.ok(this.ticketService.callCustomer(ticketId));
     }
 
     @GetMapping

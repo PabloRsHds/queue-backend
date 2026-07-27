@@ -6,6 +6,7 @@ import br.com.queue.dtos.attendance.start.FinishAttendanceDto;
 import br.com.queue.dtos.attendance.finish.ResponseAttendanceDto;
 import br.com.queue.dtos.attendance.finish.ResponseFinishAttendanceDto;
 import br.com.queue.dtos.attendance.statistics.ResponseAttendanceDashboardDto;
+import br.com.queue.dtos.ticket.attendance.ResponseTicketsForAttendance;
 import br.com.queue.entities.attendance.Attendance;
 import br.com.queue.enums.Role;
 import br.com.queue.enums.TicketStatus;
@@ -18,9 +19,11 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Service
@@ -31,6 +34,7 @@ public class AttendanceService {
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final UnitContext unitContext;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public ResponseAttendanceDto startAttendance(JwtAuthenticationToken token, StartAttendanceDto dto) {
@@ -61,6 +65,7 @@ public class AttendanceService {
         attendance.setTicket(ticket);
         attendance.setUser(user);
         attendance.setStartedAt(LocalDateTime.now());
+        attendance.setUnit(unit);
 
         ticketRepository.save(ticket);
         attendanceRepository.save(attendance);
@@ -88,6 +93,52 @@ public class AttendanceService {
 
         this.attendanceRepository.save(attendance);
         this.ticketRepository.save(ticket);
+
+        var attendanceTime = "00:00:00";
+        LocalDateTime startedAt = null;
+        LocalDateTime finishedAt = null;
+
+        attendance = ticket.getAttendance();
+
+        if (attendance.getFinishedAt() != null) {
+            Duration duration = Duration.between(
+                    attendance.getStartedAt(),
+                    attendance.getFinishedAt()
+            );
+
+            long seconds = duration.getSeconds();
+
+            attendanceTime = String.format(
+                    "%02d:%02d:%02d",
+                    seconds / 3600,
+                    (seconds % 3600) / 60,
+                    seconds % 60
+            );
+        }
+
+        if (attendance.getStartedAt() != null) {
+            startedAt = attendance.getStartedAt();
+        }
+
+        if (attendance.getFinishedAt() != null) {
+            finishedAt = attendance.getFinishedAt();
+        }
+
+        messagingTemplate.convertAndSend(
+                "/topic/tickets/history",
+                new ResponseTicketsForAttendance(
+                        ticket.getTicketId(),
+                        ticket.getCode(),
+                        ticket.getStatus().name(),
+                        ticket.getPriority().name(),
+                        ticket.getCustomer().getName(),
+                        ticket.getServiceManagement().getName(),
+                        ticket.getCreatedAt(),
+                        startedAt,
+                        finishedAt,
+                        attendanceTime
+                )
+        );
 
         return new ResponseFinishAttendanceDto(
                 attendance.getResolution(),

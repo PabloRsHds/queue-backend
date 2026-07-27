@@ -3,7 +3,6 @@ package br.com.queue.service.ticket;
 import br.com.queue.dtos.ticket.ResponseTicketDto;
 import br.com.queue.dtos.ticket.allTickets.ResponseAllTicketsDto;
 import br.com.queue.dtos.ticket.attendance.ResponseTicketsForAttendance;
-import br.com.queue.dtos.ticket.callTicket.CallTicketDto;
 import br.com.queue.dtos.ticket.create.CreateTicketDto;
 import br.com.queue.dtos.ticket.finishTicket.FinishTicketDto;
 import br.com.queue.entities.attendance.Attendance;
@@ -24,6 +23,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
@@ -42,6 +42,7 @@ public class TicketService {
     private final UnitContext unitContext;
     private final ScheduleRepository scheduleRepository;
     private final AttendanceRepository attendanceRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public ResponseTicketDto createTicket(JwtAuthenticationToken token,CreateTicketDto dto) {
@@ -91,13 +92,33 @@ public class TicketService {
 
         this.ticketRepository.save(entity);
 
+        var attendanceTime = "00:00:00";
+
+        System.out.println("ENVIANDO WEBSOCKET: " + dto);
+
+        messagingTemplate.convertAndSend(
+                "/topic/tickets",
+                new ResponseTicketsForAttendance(
+                        entity.getTicketId(),
+                        entity.getCode(),
+                        entity.getStatus().name(),
+                        entity.getPriority().name(),
+                        entity.getCustomer().getName(),
+                        entity.getServiceManagement().getName(),
+                        entity.getCreatedAt(),
+                        null,
+                        null,
+                        attendanceTime
+                )
+        );
+
         return buildResponseTicketDto(entity);
     }
 
     @Transactional
-    public ResponseTicketDto callTicket(CallTicketDto dto) {
+    public ResponseTicketDto callTicket(String ticketId) {
 
-        var entity = this.ticketRepository.findByTicketId(dto.ticketId())
+        var entity = this.ticketRepository.findByTicketId(ticketId)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
 
         entity.setStatus(TicketStatus.CALLED);
@@ -105,7 +126,25 @@ public class TicketService {
 
         this.ticketRepository.save(entity);
 
-        return this.buildResponseTicketDto(entity);
+        var response = this.buildResponseTicketDto(entity);
+        messagingTemplate.convertAndSend(
+                "/topic/queue-display",
+                response
+        );
+        return response;
+    }
+
+    public ResponseTicketDto callCustomer(String ticketId) {
+
+        var entity = this.ticketRepository.findById(ticketId);
+
+        var response = this.buildResponseTicketDto(entity.get());
+        messagingTemplate.convertAndSend(
+                "/topic/queue-display/call",
+                response
+        );
+
+        return buildResponseTicketDto(entity.get());
     }
 
     @Transactional

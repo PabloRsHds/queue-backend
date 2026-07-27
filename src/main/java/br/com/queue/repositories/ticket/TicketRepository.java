@@ -36,7 +36,7 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
             FROM tb_user_services us
             WHERE us.user_id = :userId
         )
-        AND t.status IN ('WAITING', 'IN_PROGRESS')
+        AND t.status IN ('WAITING', 'CALLED', 'IN_PROGRESS')
         ORDER BY
             CASE
                 WHEN t.priority = 'PRIORITY' THEN 0
@@ -53,7 +53,7 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
             FROM tb_user_services us
             WHERE us.user_id = :userId
         )
-        AND t.status IN ('WAITING', 'IN_PROGRESS')
+        AND t.status IN ('WAITING', 'CALLED', 'IN_PROGRESS')
         """,
             nativeQuery = true)
     Page<Ticket> getTicketsByAttendant(

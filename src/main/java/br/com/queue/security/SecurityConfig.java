@@ -11,6 +11,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -49,7 +50,7 @@ public class SecurityConfig {
 
                     configuration.setAllowedOrigins(List.of(
                             "http://localhost:4200",
-                            "http://192.168.1.2:4200",
+                            "http://192.168.1.7:4200",
                             "http://26.72.151.10:4200",
                             "http://100.113.25.102:4200",
                             "http://54.232.189.113:4200",
@@ -77,10 +78,17 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize ->
                         authorize
                                 .requestMatchers("/login/**").permitAll()
+                                .requestMatchers("/ws/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/units").permitAll()
                                 .anyRequest().authenticated());
 
         return http.build();
+    }
+
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+
+        return web -> web.ignoring().requestMatchers("/ws/**");
     }
 
     @Bean
