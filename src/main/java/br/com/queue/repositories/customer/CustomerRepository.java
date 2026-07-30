@@ -18,6 +18,11 @@ public interface CustomerRepository extends JpaRepository<Customer, String> {
 
     Optional<Customer> findByCustomerId(String customerId);
 
+    boolean existsByCpf(String cpf);
+    boolean existsByRg(String rg);
+    boolean existsByPhone(String phone);
+    boolean existsByEmail(String email);
+
     @Modifying
     void deleteByCustomerId(String customerId);
 
