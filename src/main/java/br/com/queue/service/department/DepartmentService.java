@@ -6,15 +6,15 @@ import br.com.queue.dtos.department.getDepartment.ResponseDepartmentNamesDto;
 import br.com.queue.dtos.department.getDepartment.ResponseGetDepartment;
 import br.com.queue.dtos.department.statistics.ResponseDepartmentDashBoardDto;
 import br.com.queue.dtos.department.update.UpdateDepartmentDto;
-import br.com.queue.dtos.statistics.ResponseStatisticsDto;
 import br.com.queue.entities.department.Department;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
+import br.com.queue.entities.unit.Unit;
+import br.com.queue.infra.department.DepartmentNotFoundException;
 import br.com.queue.repositories.department.DepartmentRepository;
-import br.com.queue.repositories.unit.UnitRepository;
 import br.com.queue.service.unit.UnitContext;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -23,70 +23,109 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DepartmentService {
 
     private final DepartmentRepository departmentRepository;
     private final UnitContext unitContext;
 
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+    // =========================================== CREATE ===========================================
+
     @Transactional
     public ResponseDepartmentDto createDepartment(JwtAuthenticationToken token, CreateDepartmentDto dto) {
+        log.info("Criando departamento: {}", dto.name());
 
         var unit = this.unitContext.getCurrentUnit(token);
 
-        var entity = new Department();
+        var entity = this.buildDepartmentEntity(unit, dto);
+        this.departmentRepository.save(entity);
 
+        log.info("Departamento criado com sucesso: {}, ID: {}", entity.getName(), entity.getDepartmentId());
+        return this.toResponse(entity);
+    }
+
+    private Department buildDepartmentEntity(
+            Unit unit,
+            CreateDepartmentDto dto
+    ) {
+        log.debug("Construindo entidade Department para: {}", dto.name());
+
+        var entity = new Department();
         entity.setName(dto.name());
         entity.setDescription(dto.description());
         entity.setActive(true);
         entity.setUnit(unit);
+        entity.setCreatedAt(LocalDateTime.now());
 
-        this.departmentRepository.save(entity);
-
-        return new ResponseDepartmentDto(
-                entity.getDepartmentId(),
-                entity.getName(),
-                entity.getDescription(),
-                entity.getActive()
-        );
+        return entity;
     }
+
+    // ================================================================================================
+
+    // =========================================== UPDATE ===========================================
 
     @Transactional
     public ResponseDepartmentDto updateDepartment(UpdateDepartmentDto dto) {
+        log.info("Atualizando departamento: {}", dto.departmentId());
 
-        var entity = this.departmentRepository.findByDepartmentId(dto.departmentId())
-                .orElseThrow(() -> new EntityNotFoundException("Departamento não encontrado"));
+        var entity = this.findDepartmentById(dto.departmentId());
 
-        if (!dto.name().isBlank()) {
-            entity.setName(dto.name());
-        }
-
-        entity.setDescription(dto.description());
-        entity.setActive(dto.active());
-        entity.setUpdatedAt(LocalDateTime.now());
+        this.updateDepartmentFields(entity, dto);
         this.departmentRepository.save(entity);
 
-        return new ResponseDepartmentDto(
-                entity.getDepartmentId(),
-                entity.getName(),
-                entity.getDescription(),
-                entity.getActive()
-        );
+        return this.toResponse(entity);
     }
+
+    private void updateDepartmentFields(Department entity, UpdateDepartmentDto dto) {
+        log.debug("Atualizando campos do departamento: {}", entity.getDepartmentId());
+
+        boolean hasChanges = false;
+
+        if (dto.name() != null && !dto.name().isBlank()) {
+            entity.setName(dto.name());
+            hasChanges = true;
+        }
+
+        if (dto.description() != null) {
+            entity.setDescription(dto.description());
+            hasChanges = true;
+        }
+
+        if (dto.active() != null) {
+            entity.setActive(dto.active());
+            hasChanges = true;
+        }
+
+        if (hasChanges) {
+            entity.setUpdatedAt(LocalDateTime.now());
+            log.info("Departamento atualizado com sucesso: {}, ID: {}", entity.getName(), entity.getDepartmentId());
+        } else {
+            log.debug("Nenhuma alteração detectada para o departamento: {}", dto.departmentId());
+        }
+    }
+
+    // ================================================================================================
+
+    // ============================================ GET ALL ==========================================
 
     public Page<ResponseDepartmentDto> getAllDepartments(
             JwtAuthenticationToken token,
             int page,
             int size,
-            String search) {
-
+            String search
+    ) {
         var unit = this.unitContext.getCurrentUnit(token);
+        String normalizedSearch = this.normalizeSearch(search);
 
-        String normalizedSearch = (search == null || search.isBlank())
-                ? null
-                : search.trim();
+        log.debug("Buscando departamentos - unidade: {}, página: {}, tamanho: {}, busca: {}",
+                unit.getUnitId(), page, size, normalizedSearch);
 
         return this.departmentRepository.findAllWithSearch(
                 unit.getUnitId(),
@@ -95,72 +134,122 @@ public class DepartmentService {
         );
     }
 
-    public List<ResponseDepartmentNamesDto> getDepartmentNames(){
+    // ================================================================================================
+
+    // ============================================ GET NAMES ========================================
+
+    public List<ResponseDepartmentNamesDto> getDepartmentNames() {
+        log.debug("Buscando nomes de todos os departamentos");
 
         return this.departmentRepository.findAll()
                 .stream()
                 .map(department -> new ResponseDepartmentNamesDto(department.getName()))
-                .toList();
+                .collect(Collectors.toList());
     }
 
+    // ================================================================================================
+
+    // ============================================ GET BY ID =========================================
+
     public ResponseGetDepartment getDepartmentById(String departmentId) {
+        log.debug("Buscando departamento por ID: {}", departmentId);
 
-        var department = this.departmentRepository.findByDepartmentId(departmentId)
-                .orElseThrow(() -> new EntityNotFoundException("Departamento não encontrado"));
+        var department = this.findDepartmentById(departmentId);
 
-        var services = department.getServices().stream().map(ServiceManagement::getName).toList();
+        var services = department.getServices()
+                .stream()
+                .map(ServiceManagement::getName)
+                .collect(Collectors.toList());
 
-        var updatedAt = "";
+        var updatedAt = department.getUpdatedAt() != null
+                ? department.getUpdatedAt().format(DATE_TIME_FORMATTER)
+                : null;
 
-        if (department.getUpdatedAt() != null) {
-            updatedAt = department.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-        } else {
-            updatedAt = null;
-        }
+        log.debug("Departamento encontrado: {}, com {} serviços", department.getName(), services.size());
 
         return new ResponseGetDepartment(
                 department.getDepartmentId(),
                 department.getName(),
                 department.getDescription(),
                 department.getActive(),
-                department.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                department.getCreatedAt().format(DATE_TIME_FORMATTER),
                 updatedAt,
                 services
         );
     }
 
+    // ================================================================================================
+
+    // =========================================== DELETE ===========================================
+
     @Transactional
     public ResponseDepartmentDto deleteDepartment(String departmentId) {
+        log.info("Deletando departamento: {}", departmentId);
 
-        var entity = this.departmentRepository.findByDepartmentId(departmentId)
-                .orElseThrow(() -> new EntityNotFoundException("Departamento não encontrado"));
+        var entity = this.findDepartmentById(departmentId);
 
-        var response = new ResponseDepartmentDto(
-                entity.getDepartmentId(),
-                entity.getName(),
-                entity.getDescription(),
-                entity.getActive()
-        );
+        var response = this.toResponse(entity);
 
         this.departmentRepository.delete(entity);
 
+        log.info("Departamento deletado com sucesso: {}, ID: {}", entity.getName(), departmentId);
         return response;
     }
 
-    public ResponseDepartmentDashBoardDto getStatistics(JwtAuthenticationToken token) {
+    // ================================================================================================
 
+    // =========================================== STATISTICS ========================================
+
+    public ResponseDepartmentDashBoardDto getStatistics(JwtAuthenticationToken token) {
         var unit = this.unitContext.getCurrentUnit(token);
+        log.debug("Buscando estatísticas de departamentos para unidade: {}", unit.getUnitId());
 
         var totalDepartment = this.departmentRepository.countTotalDepartmentsStatisticsDto(unit.getUnitId());
         var countServicesByDepartments = this.departmentRepository.countServicesByDepartmentStatisticsDto(unit.getUnitId());
         var departmentPercentages = this.departmentRepository.getDepartmentPercentagesStatisticsDto(unit.getUnitId());
         var departmentsCreatedByMonth = this.departmentRepository.countDepartmentsCreatedByMonth(unit.getUnitId());
 
+        log.debug(
+                "Estatísticas coletadas: total={}, " +
+                        "serviços ativos por departamento={}," +
+                        "serviços inativos por departamento={}, " +
+                        "percentuais={}, por mês={}",
+                totalDepartment,
+                countServicesByDepartments != null ? countServicesByDepartments.size() : 0,
+                departmentPercentages != null ? departmentPercentages.percentageActive() : 0,
+                departmentPercentages != null ? departmentPercentages.percentageInactive() : 0,
+                departmentsCreatedByMonth != null ? departmentsCreatedByMonth.size() : 0);
+
         return new ResponseDepartmentDashBoardDto(
                 totalDepartment,
                 countServicesByDepartments,
                 departmentPercentages,
                 departmentsCreatedByMonth
+        );
+    }
+
+    // ================================================================================================
+
+    // ======================================== AUXILIARES ============================================
+
+    private Department findDepartmentById(String departmentId) {
+        return this.departmentRepository.findByDepartmentId(departmentId)
+                .orElseThrow(() -> {
+                    log.warn("Departamento não encontrado com ID: {}", departmentId);
+                    return new DepartmentNotFoundException("Departamento não encontrado com ID: " + departmentId);
+                });
+    }
+
+    private String normalizeSearch(String search) {
+        return (search == null || search.isBlank()) ? null : search.trim();
+    }
+
+    private ResponseDepartmentDto toResponse(Department entity) {
+        return new ResponseDepartmentDto(
+                entity.getDepartmentId(),
+                entity.getName(),
+                entity.getDescription(),
+                entity.getActive()
         );
     }
 }
