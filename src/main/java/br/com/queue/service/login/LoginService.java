@@ -4,11 +4,16 @@ import br.com.queue.dtos.loginDto.RequestLoginDto;
 import br.com.queue.dtos.loginDto.ResponseUserForLogin;
 import br.com.queue.dtos.tokenDto.ResponseTokens;
 import br.com.queue.enums.Role;
+import br.com.queue.infra.unit.UnitNotFoundException;
+import br.com.queue.infra.user.UserInactiveException;
+import br.com.queue.infra.user.UserNotFoundException;
+import br.com.queue.infra.user.UserPasswordInvalidException;
+import br.com.queue.infra.user.UserUnitMismatchException;
 import br.com.queue.repositories.unit.UnitRepository;
 import br.com.queue.repositories.user.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +27,7 @@ import java.time.ZoneOffset;
 
 @RequiredArgsConstructor
 @Service
+@Slf4j
 public class LoginService {
 
     private final UserRepository userRepository;
@@ -33,31 +39,46 @@ public class LoginService {
     // ========================================== LOGIN ==============================================================
 
     public ResponseTokens login(RequestLoginDto request, HttpServletResponse response) {
+        log.info("Tentativa de login para usuário: {}, unidade: {}", request.emailOrUsername(), request.unitId());
 
         // Faço uma verificação para ver se o usuário existe, e também verifico se o e-mail e a senha estão corretos
         var user = this.verifyUser(request.unitId(), request.emailOrUsername(), request.password());
+
+        log.info("Login bem-sucedido para usuário: {}, role: {}", user.userId(), user.role());
 
         // Retorno os tokens caso o usuário exista
         return this.generateTokens(user.userId(), user.role(), user.unitId(), response);
     }
 
-    public ResponseUserForLogin verifyUser(String unitId,String emailOrUsername, String password) {
+    public ResponseUserForLogin verifyUser(String unitId, String emailOrUsername, String password) {
+        log.debug("Verificando credenciais para usuário: {}", emailOrUsername);
 
         var user = this.userRepository.findByEmailOrUsername(emailOrUsername)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> {
+                    log.warn("Usuário não encontrado: {}", emailOrUsername);
+                    return new UserNotFoundException("Usuário não encontrado: " + emailOrUsername);
+                });
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Password is incorrect");
+            log.warn("Senha incorreta para o usuário: {}", emailOrUsername);
+            throw new UserPasswordInvalidException("Senha incorreta para o usuário: " + emailOrUsername);
         }
 
         if (user.getRole() != Role.ADMIN) {
             var unit = this.unitRepository.findById(unitId)
-                    .orElseThrow(() -> new EntityNotFoundException("Unity cannot exists"));
+                    .orElseThrow(() -> {
+                        log.warn("Unidade não encontrada: {}", unitId);
+                        return new UnitNotFoundException("Unidade não encontrada com ID: " + unitId);
+                    });
 
             if (!user.getUnit().getUnitId().equals(unit.getUnitId())) {
-                throw new RuntimeException("User does not belong to this unit");
+                log.warn("Usuário {} não pertence à unidade {}", user.getUserId(), unitId);
+                throw new UserUnitMismatchException(
+                        "Usuário não pertence à unidade: " + unitId
+                );
             }
 
+            log.debug("Usuário {} verificado com sucesso para a unidade {}", user.getUserId(), unitId);
             return new ResponseUserForLogin(
                     user.getUserId(),
                     null,
@@ -66,13 +87,13 @@ public class LoginService {
             );
         }
 
+        log.debug("Usuário ADMIN {} verificado com sucesso", user.getUserId());
         return new ResponseUserForLogin(
                 user.getUserId(),
                 null,
                 user.getRole().name(),
                 unitId
         );
-
     }
 
     // Metodo de geração de tokens e refreshTokens
@@ -81,6 +102,7 @@ public class LoginService {
             String role,
             String unitId,
             HttpServletResponse response) {
+        log.info("Gerando tokens para usuário: {}, role: {}, unidade: {}", userId, role, unitId);
 
         var expireToken = LocalDateTime.now().plusMinutes(10).toInstant(ZoneOffset.of("-03:00"));
         var now = Instant.now();
@@ -109,6 +131,7 @@ public class LoginService {
         var refreshToken = this.jwtEncoder.encode(JwtEncoderParameters.from(claimsRefresh)).getTokenValue();
 
         if (accessToken == null || refreshToken == null) {
+            log.error("Falha ao gerar tokens para o usuário: {}", userId);
             throw new JwtEncodingException("Unable to generate tokens");
         }
 
@@ -122,14 +145,15 @@ public class LoginService {
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
+        log.debug("Tokens gerados com sucesso para o usuário: {}", userId);
         return new ResponseTokens(accessToken);
     }
     // ================================================================================================================
 
-
     // ====================================== LOGOUT =================================================================
 
     public void logout(HttpServletResponse response) {
+        log.info("Realizando logout");
 
         ResponseCookie cookie = ResponseCookie.from("refreshToken", "")
                 .httpOnly(true)
@@ -140,26 +164,32 @@ public class LoginService {
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-    }
 
+        log.debug("Logout realizado com sucesso, cookie de refresh removido");
+    }
 
     // ======================================== REFRESH TOKENS ========================================================
 
-    public ResponseTokens refreshTokens(String refreshToken,
-                                        HttpServletResponse response) {
+    public ResponseTokens refreshTokens(String refreshToken, HttpServletResponse response) {
+        log.info("Tentativa de refresh de tokens");
 
-        var jwt = jwtDecoder.decode(refreshToken);
+        var jwt = this.jwtDecoder.decode(refreshToken);
 
-        var user = userRepository.findByUserId(jwt.getSubject())
-                .orElseThrow();
+        var user = this.userRepository.findByUserId(jwt.getSubject())
+                .orElseThrow(() -> {
+                    log.warn("Usuário não encontrado no refresh: {}", jwt.getSubject());
+                    return new UserNotFoundException("Usuário não encontrado: " + jwt.getSubject());
+                });
 
         if (!user.getActive()) {
-            throw new RuntimeException("User inactive");
+            log.warn("Tentativa de refresh para usuário inativo: {}", user.getUserId());
+            throw new UserInactiveException("Usuário inativo: " + user.getUserId());
         }
 
         var unitId = jwt.getClaimAsString("UNIT_ID");
 
-        return generateTokens(
+        log.info("Refresh bem-sucedido para usuário: {}", user.getUserId());
+        return this.generateTokens(
                 user.getUserId(),
                 user.getRole().name(),
                 unitId,
