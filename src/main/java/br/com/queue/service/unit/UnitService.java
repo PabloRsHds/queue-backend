@@ -4,9 +4,11 @@ import br.com.queue.dtos.unit.CreateUnitDto;
 import br.com.queue.dtos.unit.ResponseUnitDto;
 import br.com.queue.dtos.unit.UpdateUnitDto;
 import br.com.queue.entities.unit.Unit;
+import br.com.queue.infra.unit.UnitIsPresentException;
+import br.com.queue.infra.unit.UnitNotFoundException;
 import br.com.queue.repositories.unit.UnitRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -17,97 +19,181 @@ import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UnitService {
 
     private final UnitRepository unitRepository;
 
-    public Page<ResponseUnitDto> getAllUnits(int page, int size, String search) {
+    private static final DateTimeFormatter DATE_FORMATTER =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-        String normalizedSearch = (search == null || search.isBlank())
-                ? null
-                : search.trim();
-
-        return unitRepository.findAllWithSearch(normalizedSearch, PageRequest.of(page, size));
-    }
+    // ============================================ CREATE ============================================
 
     @Transactional
     public ResponseUnitDto createUnit(CreateUnitDto dto) {
+        log.info("Criando unidade: {}", dto.name());
+
+        this.validateCreateUnit(dto);
+
+        var entity = this.toEntity(dto);
+
+        this.unitRepository.save(entity);
+
+        log.info("Unidade criada com sucesso: {}, ID: {}", entity.getName(), entity.getUnitId());
+        return this.toResponse(entity);
+    }
+
+    private Unit toEntity(CreateUnitDto dto) {
+        log.debug("Convertendo CreateUnitDto para entidade Unit: {}", dto.name());
 
         var entity = new Unit();
-
         entity.setName(dto.name());
         entity.setAddress(dto.address());
         entity.setActive(true);
         entity.setCreatedAt(LocalDateTime.now());
 
-        unitRepository.save(entity);
-
-        return toDto(entity);
+        return entity;
     }
+
+    // ================================================================================================
+
+    // ============================================ UPDATE ============================================
 
     @Transactional
     public ResponseUnitDto updateUnit(UpdateUnitDto dto) {
+        log.info("Atualizando unidade: {}", dto.unitId());
 
-        var entity = unitRepository.findById(dto.unitId())
-                .orElseThrow(() -> new EntityNotFoundException("Unidade não encontrada."));
+        var entity = this.findUnit(dto.unitId());
+
+        this.validateUpdateUnit(dto, entity);
+        this.updateEntity(dto, entity);
+
+        this.unitRepository.save(entity);
+
+        log.info("Unidade atualizada com sucesso: {}, ID: {}", entity.getName(), entity.getUnitId());
+        return this.toResponse(entity);
+    }
+
+    private void updateEntity(UpdateUnitDto dto, Unit entity) {
+        log.debug("Atualizando campos da unidade: {}", entity.getUnitId());
+
+        boolean hasChanges = false;
 
         if (dto.name() != null && !dto.name().isBlank()) {
             entity.setName(dto.name());
+            hasChanges = true;
         }
 
         if (dto.address() != null) {
             entity.setAddress(dto.address());
+            hasChanges = true;
         }
 
         if (dto.active() != null) {
             entity.setActive(dto.active());
+            hasChanges = true;
         }
 
-        entity.setUpdatedAt(LocalDateTime.now());
-        entity.setUpdatedAt(LocalDateTime.now());
-
-        unitRepository.save(entity);
-
-        return toDto(entity);
+        if (hasChanges) {
+            entity.setUpdatedAt(LocalDateTime.now());
+            log.debug("Campos da unidade {} foram atualizados", entity.getUnitId());
+        } else {
+            log.debug("Nenhuma alteração detectada para a unidade {}", entity.getUnitId());
+        }
     }
+
+    // ================================================================================================
+
+    // ============================================ DELETE ============================================
 
     @Transactional
     public ResponseUnitDto deleteUnit(String unitId) {
+        log.info("Deletando unidade: {}", unitId);
 
-        var entity = unitRepository.findById(unitId)
-                .orElseThrow(() -> new EntityNotFoundException("Unidade não encontrada."));
+        var entity = this.findUnit(unitId);
+        var response = this.toResponse(entity);
 
-        var response = this.toDto(entity);
-        unitRepository.delete(entity);
+        this.unitRepository.delete(entity);
 
+        log.info("Unidade deletada com sucesso: {}, ID: {}", entity.getName(), unitId);
         return response;
     }
 
+    // ================================================================================================
+
+    // ============================================ GET BY ID =========================================
+
     @Transactional(readOnly = true)
     public ResponseUnitDto getUnitById(String unitId) {
+        log.debug("Buscando unidade por ID: {}", unitId);
 
-        var unit = this.unitRepository.findById(unitId)
-                .orElseThrow(() -> new EntityNotFoundException("Departamento não encontrado"));
+        var entity = this.findUnit(unitId);
 
-        var updatedAt = "";
+        return this.toResponse(entity);
+    }
 
-        if (unit.getUpdatedAt() != null) {
-            updatedAt = unit.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-        } else {
-            updatedAt = null;
-        }
+    // ================================================================================================
 
-        return new ResponseUnitDto(
-                unit.getUnitId(),
-                unit.getName(),
-                unit.getAddress(),
-                unit.getActive(),
-                unit.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
-                updatedAt
+    // ============================================ GET ALL ===========================================
+
+    public Page<ResponseUnitDto> getAllUnits(int page, int size, String search) {
+        String normalizedSearch = this.normalizeSearch(search);
+
+        log.debug("Buscando unidades - página: {}, tamanho: {}, busca: {}",
+                page, size, normalizedSearch);
+
+        return this.unitRepository.findAllWithSearch(
+                normalizedSearch,
+                PageRequest.of(page, size)
         );
     }
 
-    private ResponseUnitDto toDto(Unit entity) {
+    // ================================================================================================
+
+    // ======================================== AUXILIARES ============================================
+
+    private Unit findUnit(String unitId) {
+        return this.unitRepository.findById(unitId)
+                .orElseThrow(() -> {
+                    log.warn("Unidade não encontrada com ID: {}", unitId);
+                    return new UnitNotFoundException("Unidade não encontrada com ID: " + unitId);
+                });
+    }
+
+    private void validateCreateUnit(CreateUnitDto dto) {
+        log.debug("Validando dados para criação da unidade: {}", dto.name());
+
+        if (this.unitRepository.findByName(dto.name()).isPresent()) {
+            log.warn("Tentativa de criar unidade com nome já existente: {}", dto.name());
+            throw new UnitIsPresentException("Uma unidade com o nome '" + dto.name() + "' já existe.");
+        }
+
+        log.debug("Validação concluída com sucesso para a unidade: {}", dto.name());
+    }
+
+    private void validateUpdateUnit(UpdateUnitDto dto, Unit entity) {
+        log.debug("Validando dados para atualização da unidade: {}", entity.getUnitId());
+
+        if (dto.name() != null
+                && !dto.name().isBlank()
+                && !dto.name().equals(entity.getName())
+                && this.unitRepository.findByName(dto.name()).isPresent()) {
+
+            log.warn("Tentativa de atualizar unidade com nome já existente: {}", dto.name());
+            throw new UnitIsPresentException("Uma unidade com o nome '" + dto.name() + "' já existe.");
+        }
+
+        log.debug("Validação de atualização concluída para a unidade: {}", entity.getUnitId());
+    }
+
+    private String normalizeSearch(String search) {
+        return (search == null || search.isBlank()) ? null : search.trim();
+    }
+
+    private ResponseUnitDto toResponse(Unit entity) {
+        var updatedAt = entity.getUpdatedAt() != null
+                ? entity.getUpdatedAt().format(DATE_FORMATTER)
+                : null;
 
         return new ResponseUnitDto(
                 entity.getUnitId(),
@@ -115,11 +201,9 @@ public class UnitService {
                 entity.getAddress(),
                 entity.getActive(),
                 entity.getCreatedAt() != null
-                        ? entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                        ? entity.getCreatedAt().format(DATE_FORMATTER)
                         : null,
-                entity.getUpdatedAt() != null
-                        ? entity.getUpdatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-                        : null
+                updatedAt
         );
     }
 }
