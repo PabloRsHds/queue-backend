@@ -1,6 +1,8 @@
-package br.com.queue.infra;
+package br.com.queue.infra.global;
 
 import br.com.queue.dtos.error.ErrorResponse;
+import br.com.queue.infra.user.UserNotFoundException;
+import br.com.queue.infra.user.UserValidationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
