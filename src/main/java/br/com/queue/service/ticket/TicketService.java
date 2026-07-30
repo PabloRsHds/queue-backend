@@ -12,15 +12,19 @@ import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.entities.ticket.Ticket;
 import br.com.queue.enums.PriorityLevel;
 import br.com.queue.enums.TicketStatus;
+import br.com.queue.infra.customer.CustomerNotFoundException;
+import br.com.queue.infra.schedule.ScheduleNotFoundException;
+import br.com.queue.infra.serviceManagement.ServiceManagementNotFoundException;
+import br.com.queue.infra.ticket.TicketNotFoundException;
 import br.com.queue.repositories.attendance.AttendanceRepository;
 import br.com.queue.repositories.customer.CustomerRepository;
 import br.com.queue.repositories.schedule.ScheduleRepository;
 import br.com.queue.repositories.serviceManagement.ServiceManagementRepository;
 import br.com.queue.repositories.ticket.TicketRepository;
 import br.com.queue.service.unit.UnitContext;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -30,10 +34,10 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TicketService {
 
     private final TicketRepository ticketRepository;
@@ -44,134 +48,100 @@ public class TicketService {
     private final AttendanceRepository attendanceRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+    private static final String ATTENDANCE_TIME_DEFAULT = "00:00:00";
+
     @Transactional
-    public ResponseTicketDto createTicket(JwtAuthenticationToken token,CreateTicketDto dto) {
+    public ResponseTicketDto createTicket(JwtAuthenticationToken token, CreateTicketDto dto) {
+        log.info("Criando ticket para scheduleId: {}, customerId: {}, serviceId: {}",
+                dto.scheduleId(), dto.customerId(), dto.serviceManagementId());
 
         var unit = this.unitContext.getCurrentUnit(token);
+        var schedule = this.findScheduleById(dto.scheduleId());
+        var customer = this.findCustomerById(dto.customerId());
+        var serviceManagement = this.findServiceManagementById(dto.serviceManagementId());
 
-        Optional<Schedule> scheduleEntity = this.scheduleRepository.findById(dto.scheduleId());
-        Optional<Customer> customerEntity = this.customerRepository.findByCustomerId(dto.customerId());
-        Optional<ServiceManagement> serviceManagementEntity = this.serviceManagementRepository
-                .findByServiceManagementId(dto.serviceManagementId());
-
-        if (scheduleEntity.isEmpty()
-                || customerEntity.isEmpty()
-                || serviceManagementEntity.isEmpty()) {
-            throw new EntityNotFoundException("Dados não encontrados para dar prosseguimento a criação de ticket");
-        }
-
-        var schedule = scheduleEntity.get();
-        var customer = customerEntity.get();
-        var serviceManagement = serviceManagementEntity.get();
-
-        Optional<Ticket> ticketEntity = this.ticketRepository
+        // Verifica se já existe ticket para este agendamento
+        var existingTicket = this.ticketRepository
                 .findTicketByScheduleScheduleId(dto.scheduleId());
 
-        if (ticketEntity.isPresent()) {
-
-            var ticket = ticketEntity.get();
+        if (existingTicket.isPresent()) {
+            var ticket = existingTicket.get();
             ticket.setCreatedAt(LocalDateTime.now());
             this.ticketRepository.save(ticket);
-            return buildResponseTicketDto(ticket);
+            log.info("Ticket existente atualizado: {}", ticket.getTicketId());
+            return this.buildResponseTicketDto(ticket);
         }
 
+        // Gera novo número de chamada
         var nextCallNumber = serviceManagement.getLastTicketNumber() + 1;
         serviceManagement.setLastTicketNumber(nextCallNumber);
-        serviceManagementRepository.save(serviceManagement);
+        this.serviceManagementRepository.save(serviceManagement);
 
-        var entity = new Ticket();
-        entity.setCallNumber(nextCallNumber);
-        entity.setCode(generateCode(serviceManagement.getCode(), nextCallNumber));
-        entity.setCustomer(customer);
-        entity.setServiceManagement(serviceManagement);
-        entity.setPriority(PriorityLevel.valueOf(dto.priority()));
-        entity.setStatus(TicketStatus.WAITING);
-        entity.setCreatedAt(LocalDateTime.now());
-        entity.setSchedule(schedule);
-        entity.setUnit(unit);
-
+        // Cria novo ticket
+        var entity = this.createTicketEntity(
+                unit,
+                schedule,
+                customer,
+                serviceManagement,
+                nextCallNumber,
+                dto
+        );
         this.ticketRepository.save(entity);
 
-        var attendanceTime = "00:00:00";
+        // Envia notificação WebSocket
+        this.sendTicketCreatedNotification(entity);
 
-        System.out.println("ENVIANDO WEBSOCKET: " + dto);
-
-        messagingTemplate.convertAndSend(
-                "/topic/tickets",
-                new ResponseTicketsForAttendance(
-                        entity.getTicketId(),
-                        entity.getCode(),
-                        entity.getStatus().name(),
-                        entity.getPriority().name(),
-                        entity.getCustomer().getName(),
-                        entity.getServiceManagement().getName(),
-                        entity.getCreatedAt(),
-                        null,
-                        null,
-                        attendanceTime
-                )
-        );
-
-        return buildResponseTicketDto(entity);
+        log.info("Ticket criado com sucesso: {}, código: {}", entity.getTicketId(), entity.getCode());
+        return this.buildResponseTicketDto(entity);
     }
 
     @Transactional
     public ResponseTicketDto callTicket(String ticketId) {
+        log.info("Chamando ticket: {}", ticketId);
 
-        var entity = this.ticketRepository.findByTicketId(ticketId)
-                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
-
+        var entity = this.findTicketById(ticketId);
         entity.setStatus(TicketStatus.CALLED);
         entity.setCalledAt(LocalDateTime.now());
-
         this.ticketRepository.save(entity);
 
         var response = this.buildResponseTicketDto(entity);
-        messagingTemplate.convertAndSend(
-                "/topic/queue-display",
-                response
-        );
+        this.sendQueueDisplayNotification(response);
+
+        log.info("Ticket chamado com sucesso: {}", ticketId);
         return response;
     }
 
     public ResponseTicketDto callCustomer(String ticketId) {
+        log.info("Chamando cliente do ticket: {}", ticketId);
 
-        var entity = this.ticketRepository.findById(ticketId);
+        var entity = this.findTicketById(ticketId);
+        var response = this.buildResponseTicketDto(entity);
 
-        var response = this.buildResponseTicketDto(entity.get());
-        messagingTemplate.convertAndSend(
-                "/topic/queue-display/call",
-                response
-        );
+        this.sendCustomerCallNotification(response);
 
-        return buildResponseTicketDto(entity.get());
+        log.info("Cliente chamado com sucesso para o ticket: {}", ticketId);
+        return response;
     }
 
     @Transactional
     public ResponseTicketDto finishTicket(FinishTicketDto dto) {
+        log.info("Finalizando ticket: {}, status: {}", dto.ticketId(), dto.status());
 
-        var entity = this.ticketRepository.findById(dto.ticketId())
-                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
-
+        var entity = this.findTicketById(dto.ticketId());
         entity.setStatus(TicketStatus.valueOf(dto.status()));
-
         this.ticketRepository.save(entity);
 
+        log.info("Ticket finalizado com sucesso: {}", dto.ticketId());
         return this.buildResponseTicketDto(entity);
     }
 
     public Page<ResponseAllTicketsDto> getAllTickets(int page, int size) {
+        log.debug("Buscando todos os tickets - página: {}, tamanho: {}", page, size);
 
         return this.ticketRepository.findAll(PageRequest.of(page, size))
-                .map(ticket -> new ResponseAllTicketsDto(
-                        ticket.getTicketId(),
-                        ticket.getCode(),
-                        ticket.getCustomer().getName(),
-                        ticket.getServiceManagement().getName(),
-                        ticket.getPriority().name(),
-                        ticket.getStatus().name(),
-                        ticket.getCreatedAt()
-                ));
+                .map(this::buildResponseAllTicketsDto);
     }
 
     public Page<ResponseTicketsForAttendance> getTicketsByAttendant(
@@ -179,77 +149,12 @@ public class TicketService {
             int page,
             int size
     ) {
-
         var unit = this.unitContext.getCurrentUnit(token);
+        log.debug("Buscando tickets do atendente: {}, unidade: {}", token.getName(), unit.getUnitId());
 
         return this.ticketRepository
-                .getTicketsByAttendant(
-                        unit.getUnitId(),
-                        token.getName(),
-                        PageRequest.of(page, size))
-                .map(ticket -> {
-
-                    Attendance attendance = null;
-                    var attendanceTime = "00:00:00";
-                    LocalDateTime startedAt = null;
-                    LocalDateTime finishedAt = null;
-
-                    if (ticket.getAttendance() == null) {
-                        
-                    } else {
-                        attendance = ticket.getAttendance();
-
-                        if (attendance.getFinishedAt() != null) {
-                            Duration duration = Duration.between(
-                                    attendance.getStartedAt(),
-                                    attendance.getFinishedAt()
-                            );
-
-                            long seconds = duration.getSeconds();
-
-                            attendanceTime = String.format(
-                                    "%02d:%02d:%02d",
-                                    seconds / 3600,
-                                    (seconds % 3600) / 60,
-                                    seconds % 60
-                            );
-                        }
-
-                        if (attendance.getStartedAt() != null) {
-                            startedAt = attendance.getStartedAt();
-                        }
-
-                        if (attendance.getFinishedAt() != null) {
-                            finishedAt = attendance.getFinishedAt();
-                        }
-
-                        return new ResponseTicketsForAttendance(
-                                ticket.getTicketId(),
-                                ticket.getCode(),
-                                ticket.getStatus().name(),
-                                ticket.getPriority().name(),
-                                ticket.getCustomer().getName(),
-                                ticket.getServiceManagement().getName(),
-                                ticket.getCreatedAt(),
-                                startedAt,
-                                finishedAt,
-                                attendanceTime
-                        );
-                    }
-
-                    return new ResponseTicketsForAttendance(
-                            ticket.getTicketId(),
-                            ticket.getCode(),
-                            ticket.getStatus().name(),
-                            ticket.getPriority().name(),
-                            ticket.getCustomer().getName(),
-                            ticket.getServiceManagement().getName(),
-                            ticket.getCreatedAt(),
-                            null,
-                            null,
-                            attendanceTime
-                    );
-                });
+                .getTicketsByAttendant(unit.getUnitId(), token.getName(), PageRequest.of(page, size))
+                .map(this::buildResponseTicketsForAttendance);
     }
 
     public Page<ResponseTicketsForAttendance> getHistoryTicketsByAttendant(
@@ -257,149 +162,165 @@ public class TicketService {
             int page,
             int size
     ) {
-
         var unit = this.unitContext.getCurrentUnit(token);
+        log.debug("Buscando histórico de tickets do atendente: {}, unidade: {}", token.getName(), unit.getUnitId());
 
         return this.ticketRepository
-                .getHistoryTicketsByAttendant(
-                        unit.getUnitId(),
-                        token.getName(),
-                        PageRequest.of(page, size))
-                .map(ticket -> {
-
-                    Attendance attendance = null;
-                    var attendanceTime = "00:00:00";
-                    LocalDateTime startedAt = null;
-                    LocalDateTime finishedAt = null;
-
-                    if (ticket.getAttendance() == null) {
-
-                    } else {
-                        attendance = ticket.getAttendance();
-
-                        if (attendance.getFinishedAt() != null) {
-                            Duration duration = Duration.between(
-                                    attendance.getStartedAt(),
-                                    attendance.getFinishedAt()
-                            );
-
-                            long seconds = duration.getSeconds();
-
-                            attendanceTime = String.format(
-                                    "%02d:%02d:%02d",
-                                    seconds / 3600,
-                                    (seconds % 3600) / 60,
-                                    seconds % 60
-                            );
-                        }
-
-                        if (attendance.getStartedAt() != null) {
-                            startedAt = attendance.getStartedAt();
-                        }
-
-                        if (attendance.getFinishedAt() != null) {
-                            finishedAt = attendance.getFinishedAt();
-                        }
-
-                        return new ResponseTicketsForAttendance(
-                                ticket.getTicketId(),
-                                ticket.getCode(),
-                                ticket.getStatus().name(),
-                                ticket.getPriority().name(),
-                                ticket.getCustomer().getName(),
-                                ticket.getServiceManagement().getName(),
-                                ticket.getCreatedAt(),
-                                startedAt,
-                                finishedAt,
-                                attendanceTime
-                        );
-                    }
-
-                    return new ResponseTicketsForAttendance(
-                            ticket.getTicketId(),
-                            ticket.getCode(),
-                            ticket.getStatus().name(),
-                            ticket.getPriority().name(),
-                            ticket.getCustomer().getName(),
-                            ticket.getServiceManagement().getName(),
-                            ticket.getCreatedAt(),
-                            null,
-                            null,
-                            attendanceTime
-                    );
-                });
+                .getHistoryTicketsByAttendant(unit.getUnitId(), token.getName(), PageRequest.of(page, size))
+                .map(this::buildResponseTicketsForAttendance);
     }
 
     public ResponseTicketDto getTicketById(String ticketId) {
-
-        var entity = this.ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
-
-        return buildResponseTicketDto(entity);
+        log.debug("Buscando ticket por ID: {}", ticketId);
+        var entity = this.findTicketById(ticketId);
+        return this.buildResponseTicketDto(entity);
     }
 
     @Transactional
     public ResponseTicketDto deleteTicket(String ticketId) {
+        log.info("Deletando ticket: {}", ticketId);
 
-        var entity = this.ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
-
+        var entity = this.findTicketById(ticketId);
         var response = this.buildResponseTicketDto(entity);
 
-        if (entity.getAttendance() != null) {
-            this.attendanceRepository.delete(entity.getAttendance());
-        }
-
+        this.deleteAttendanceIfExists(entity);
         this.ticketRepository.delete(entity);
 
+        log.info("Ticket deletado com sucesso: {}", ticketId);
         return response;
     }
 
+    @Transactional
     public ResponseTicketDto cancelTicket(String ticketId) {
+        log.info("Cancelando ticket: {}", ticketId);
 
-        var entity = this.ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
-
-        if (entity.getAttendance().getStartedAt() != null) {
-
-            var attendance = entity.getAttendance();
-            attendance.setFinishedAt(LocalDateTime.now());
-
-            this.attendanceRepository.save(attendance);
-        }
+        var entity = this.findTicketById(ticketId);
+        this.finishAttendanceIfExists(entity);
 
         entity.setStatus(TicketStatus.CANCELED);
         this.ticketRepository.save(entity);
 
+        log.info("Ticket cancelado com sucesso: {}", ticketId);
         return this.buildResponseTicketDto(entity);
     }
 
     public void resetCode(String ticketId) {
+        log.info("Resetando código do ticket: {}", ticketId);
 
-        var entity = this.ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new EntityNotFoundException("Ticket not found"));
-
+        var entity = this.findTicketById(ticketId);
         entity.setCallNumber(0);
         this.ticketRepository.save(entity);
+
+        log.info("Código resetado com sucesso para o ticket: {}", ticketId);
     }
 
+    // Métodos auxiliares para buscar entidades
+    private Schedule findScheduleById(String scheduleId) {
+        return this.scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new ScheduleNotFoundException(scheduleId));
+    }
+
+    private Customer findCustomerById(String customerId) {
+        return this.customerRepository.findByCustomerId(customerId)
+                .orElseThrow(() -> new CustomerNotFoundException(customerId));
+    }
+
+    private ServiceManagement findServiceManagementById(String serviceManagementId) {
+        return this.serviceManagementRepository.findByServiceManagementId(serviceManagementId)
+                .orElseThrow(() -> new ServiceManagementNotFoundException(serviceManagementId));
+    }
+
+    private Ticket findTicketById(String ticketId) {
+        return this.ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new TicketNotFoundException(ticketId));
+    }
+
+    // Metodo para criar a entidade Ticket
+    private Ticket createTicketEntity(
+            br.com.queue.entities.unit.Unit unit,
+            Schedule schedule,
+            Customer customer,
+            ServiceManagement serviceManagement,
+            long callNumber,
+            CreateTicketDto dto
+    ) {
+        var ticket = new Ticket();
+        ticket.setCallNumber(callNumber);
+        ticket.setCode(this.generateCode(serviceManagement.getCode(), callNumber));
+        ticket.setCustomer(customer);
+        ticket.setServiceManagement(serviceManagement);
+        ticket.setPriority(PriorityLevel.valueOf(dto.priority()));
+        ticket.setStatus(TicketStatus.WAITING);
+        ticket.setCreatedAt(LocalDateTime.now());
+        ticket.setSchedule(schedule);
+        ticket.setUnit(unit);
+        return ticket;
+    }
+
+    // Metodo para gerar código do ticket
     private String generateCode(String prefix, long callNumber) {
-
         if (callNumber < 10) {
-            return "%s-%02d".formatted(prefix, callNumber);
+            return String.format("%s-%02d", prefix, callNumber);
         } else if (callNumber < 100) {
-            return "%s-%03d".formatted(prefix, callNumber);
+            return String.format("%s-%03d", prefix, callNumber);
         }
-        return "%s-%03d".formatted(prefix, callNumber);
+        return String.format("%s-%03d", prefix, callNumber);
     }
 
-    // Metodo auxiliar para não repetir código
-    private ResponseTicketDto buildResponseTicketDto(Ticket entity) {
-        var calledAt = "";
-
-        if (entity.getCalledAt() != null) {
-            calledAt = entity.getCalledAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+    // Metodo para calcular tempo de atendimento
+    private String calculateAttendanceTime(Attendance attendance) {
+        if (attendance == null || attendance.getFinishedAt() == null) {
+            return ATTENDANCE_TIME_DEFAULT;
         }
+
+        Duration duration = Duration.between(attendance.getStartedAt(), attendance.getFinishedAt());
+        long seconds = duration.getSeconds();
+
+        return String.format(
+                "%02d:%02d:%02d",
+                seconds / 3600,
+                (seconds % 3600) / 60,
+                seconds % 60
+        );
+    }
+
+    // Métodos para gerenciar atendimento
+    private void deleteAttendanceIfExists(Ticket ticket) {
+        if (ticket.getAttendance() != null) {
+            this.attendanceRepository.delete(ticket.getAttendance());
+        }
+    }
+
+    private void finishAttendanceIfExists(Ticket ticket) {
+        var attendance = ticket.getAttendance();
+        if (attendance != null && attendance.getStartedAt() != null) {
+            attendance.setFinishedAt(LocalDateTime.now());
+            this.attendanceRepository.save(attendance);
+        }
+    }
+
+    // Métodos para enviar notificações WebSocket
+    private void sendTicketCreatedNotification(Ticket ticket) {
+        var notification = this.buildResponseTicketsForAttendance(ticket);
+        this.messagingTemplate.convertAndSend("/topic/tickets", notification);
+        log.debug("Notificação de criação enviada via WebSocket para o ticket: {}", ticket.getTicketId());
+    }
+
+    private void sendQueueDisplayNotification(ResponseTicketDto response) {
+        this.messagingTemplate.convertAndSend("/topic/queue-display", response);
+        log.debug("Notificação de fila enviada via WebSocket para o ticket: {}", response.ticketId());
+    }
+
+    private void sendCustomerCallNotification(ResponseTicketDto response) {
+        this.messagingTemplate.convertAndSend("/topic/queue-display/call", response);
+        log.debug("Notificação de chamada de cliente enviada via WebSocket para o ticket: {}", response.ticketId());
+    }
+
+    // Métodos para construir DTOs de resposta
+    private ResponseTicketDto buildResponseTicketDto(Ticket entity) {
+        var calledAt = entity.getCalledAt() != null
+                ? entity.getCalledAt().format(DATE_TIME_FORMATTER)
+                : "";
 
         return new ResponseTicketDto(
                 entity.getTicketId(),
@@ -410,8 +331,46 @@ public class TicketService {
                 entity.getServiceManagement().getName(),
                 entity.getPriority().name(),
                 entity.getStatus().name(),
-                entity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                entity.getCreatedAt().format(DATE_TIME_FORMATTER),
                 calledAt
+        );
+    }
+
+    private ResponseAllTicketsDto buildResponseAllTicketsDto(Ticket ticket) {
+        return new ResponseAllTicketsDto(
+                ticket.getTicketId(),
+                ticket.getCode(),
+                ticket.getCustomer().getName(),
+                ticket.getServiceManagement().getName(),
+                ticket.getPriority().name(),
+                ticket.getStatus().name(),
+                ticket.getCreatedAt()
+        );
+    }
+
+    private ResponseTicketsForAttendance buildResponseTicketsForAttendance(Ticket ticket) {
+        var attendance = ticket.getAttendance();
+        var attendanceTime = ATTENDANCE_TIME_DEFAULT;
+        LocalDateTime startedAt = null;
+        LocalDateTime finishedAt = null;
+
+        if (attendance != null) {
+            attendanceTime = this.calculateAttendanceTime(attendance);
+            startedAt = attendance.getStartedAt();
+            finishedAt = attendance.getFinishedAt();
+        }
+
+        return new ResponseTicketsForAttendance(
+                ticket.getTicketId(),
+                ticket.getCode(),
+                ticket.getStatus().name(),
+                ticket.getPriority().name(),
+                ticket.getCustomer().getName(),
+                ticket.getServiceManagement().getName(),
+                ticket.getCreatedAt(),
+                startedAt,
+                finishedAt,
+                attendanceTime
         );
     }
 }
