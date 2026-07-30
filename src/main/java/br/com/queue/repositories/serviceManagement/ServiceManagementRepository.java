@@ -24,6 +24,8 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
     Set<ServiceManagement> findAllByServiceManagementIdIn(
             Set<String> serviceManagementIds);
 
+    Optional<ServiceManagement> findByName(String name);
+
     @Modifying
     @Query(value = """
     DELETE FROM tb_user_services
