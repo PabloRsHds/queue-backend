@@ -34,6 +34,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -52,6 +53,8 @@ public class TicketService {
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final String ATTENDANCE_TIME_DEFAULT = "00:00:00";
 
+    // =========================================== CREATE ===========================================
+
     @Transactional
     public ResponseTicketDto createTicket(JwtAuthenticationToken token, CreateTicketDto dto) {
         log.info("Criando ticket para scheduleId: {}, customerId: {}, serviceId: {}",
@@ -63,39 +66,75 @@ public class TicketService {
         var serviceManagement = this.findServiceManagementById(dto.serviceManagementId());
 
         // Verifica se já existe ticket para este agendamento
-        var existingTicket = this.ticketRepository
-                .findTicketByScheduleScheduleId(dto.scheduleId());
+        var existingTicket = this.findExistingTicketBySchedule(dto.scheduleId());
 
         if (existingTicket.isPresent()) {
-            var ticket = existingTicket.get();
-            ticket.setCreatedAt(LocalDateTime.now());
-            this.ticketRepository.save(ticket);
+            var ticket = this.updateExistingTicket(existingTicket.get());
             log.info("Ticket existente atualizado: {}", ticket.getTicketId());
             return this.buildResponseTicketDto(ticket);
         }
 
-        // Gera novo número de chamada
+        // Gera novo número de chamada e cria ticket
+        var ticket = this.createNewTicket(unit, schedule, customer, serviceManagement, dto);
+        this.ticketRepository.save(ticket);
+
+        // Envia notificação WebSocket
+        this.sendTicketCreatedNotification(ticket);
+
+        log.info("Ticket criado com sucesso: {}, código: {}", ticket.getTicketId(), ticket.getCode());
+        return this.buildResponseTicketDto(ticket);
+    }
+
+    private Ticket updateExistingTicket(Ticket ticket) {
+        ticket.setCreatedAt(LocalDateTime.now());
+        return this.ticketRepository.save(ticket);
+    }
+
+    private Ticket createNewTicket(
+            br.com.queue.entities.unit.Unit unit,
+            Schedule schedule,
+            Customer customer,
+            ServiceManagement serviceManagement,
+            CreateTicketDto dto
+    ) {
+        var nextCallNumber = this.generateNextCallNumber(serviceManagement);
+        return this.buildTicketEntity(unit, schedule, customer, serviceManagement, nextCallNumber, dto);
+    }
+
+    private long generateNextCallNumber(ServiceManagement serviceManagement) {
         var nextCallNumber = serviceManagement.getLastTicketNumber() + 1;
         serviceManagement.setLastTicketNumber(nextCallNumber);
         this.serviceManagementRepository.save(serviceManagement);
-
-        // Cria novo ticket
-        var entity = this.createTicketEntity(
-                unit,
-                schedule,
-                customer,
-                serviceManagement,
-                nextCallNumber,
-                dto
-        );
-        this.ticketRepository.save(entity);
-
-        // Envia notificação WebSocket
-        this.sendTicketCreatedNotification(entity);
-
-        log.info("Ticket criado com sucesso: {}, código: {}", entity.getTicketId(), entity.getCode());
-        return this.buildResponseTicketDto(entity);
+        return nextCallNumber;
     }
+
+    private Ticket buildTicketEntity(
+            br.com.queue.entities.unit.Unit unit,
+            Schedule schedule,
+            Customer customer,
+            ServiceManagement serviceManagement,
+            long callNumber,
+            CreateTicketDto dto
+    ) {
+        log.debug("Construindo entidade Ticket para: {}", dto.scheduleId());
+
+        var ticket = new Ticket();
+        ticket.setCallNumber(callNumber);
+        ticket.setCode(this.generateCode(serviceManagement.getCode(), callNumber));
+        ticket.setCustomer(customer);
+        ticket.setServiceManagement(serviceManagement);
+        ticket.setPriority(PriorityLevel.valueOf(dto.priority()));
+        ticket.setStatus(TicketStatus.WAITING);
+        ticket.setCreatedAt(LocalDateTime.now());
+        ticket.setSchedule(schedule);
+        ticket.setUnit(unit);
+
+        return ticket;
+    }
+
+    // ================================================================================================
+
+    // ============================================ UPDATE ===========================================
 
     @Transactional
     public ResponseTicketDto callTicket(String ticketId) {
@@ -113,68 +152,33 @@ public class TicketService {
         return response;
     }
 
-    public ResponseTicketDto callCustomer(String ticketId) {
-        log.info("Chamando cliente do ticket: {}", ticketId);
-
-        var entity = this.findTicketById(ticketId);
-        var response = this.buildResponseTicketDto(entity);
-
-        this.sendCustomerCallNotification(response);
-
-        log.info("Cliente chamado com sucesso para o ticket: {}", ticketId);
-        return response;
-    }
-
     @Transactional
     public ResponseTicketDto finishTicket(FinishTicketDto dto) {
         log.info("Finalizando ticket: {}, status: {}", dto.ticketId(), dto.status());
 
         var entity = this.findTicketById(dto.ticketId());
         entity.setStatus(TicketStatus.valueOf(dto.status()));
-        this.ticketRepository.save(entity);
 
         log.info("Ticket finalizado com sucesso: {}", dto.ticketId());
-        return this.buildResponseTicketDto(entity);
+        return this.buildResponseTicketDto(this.ticketRepository.save(entity));
     }
 
-    public Page<ResponseAllTicketsDto> getAllTickets(int page, int size) {
-        log.debug("Buscando todos os tickets - página: {}, tamanho: {}", page, size);
+    @Transactional
+    public ResponseTicketDto cancelTicket(String ticketId) {
+        log.info("Cancelando ticket: {}", ticketId);
 
-        return this.ticketRepository.findAll(PageRequest.of(page, size))
-                .map(this::buildResponseAllTicketsDto);
-    }
-
-    public Page<ResponseTicketsForAttendance> getTicketsByAttendant(
-            JwtAuthenticationToken token,
-            int page,
-            int size
-    ) {
-        var unit = this.unitContext.getCurrentUnit(token);
-        log.debug("Buscando tickets do atendente: {}, unidade: {}", token.getName(), unit.getUnitId());
-
-        return this.ticketRepository
-                .getTicketsByAttendant(unit.getUnitId(), token.getName(), PageRequest.of(page, size))
-                .map(this::buildResponseTicketsForAttendance);
-    }
-
-    public Page<ResponseTicketsForAttendance> getHistoryTicketsByAttendant(
-            JwtAuthenticationToken token,
-            int page,
-            int size
-    ) {
-        var unit = this.unitContext.getCurrentUnit(token);
-        log.debug("Buscando histórico de tickets do atendente: {}, unidade: {}", token.getName(), unit.getUnitId());
-
-        return this.ticketRepository
-                .getHistoryTicketsByAttendant(unit.getUnitId(), token.getName(), PageRequest.of(page, size))
-                .map(this::buildResponseTicketsForAttendance);
-    }
-
-    public ResponseTicketDto getTicketById(String ticketId) {
-        log.debug("Buscando ticket por ID: {}", ticketId);
         var entity = this.findTicketById(ticketId);
-        return this.buildResponseTicketDto(entity);
+        this.finishAttendanceIfExists(entity);
+
+        entity.setStatus(TicketStatus.CANCELED);
+
+        log.info("Ticket cancelado com sucesso: {}", ticketId);
+        return this.buildResponseTicketDto(this.ticketRepository.save(entity));
     }
+
+    // ================================================================================================
+
+    // ============================================ DELETE ===========================================
 
     @Transactional
     public ResponseTicketDto deleteTicket(String ticketId) {
@@ -190,19 +194,80 @@ public class TicketService {
         return response;
     }
 
-    @Transactional
-    public ResponseTicketDto cancelTicket(String ticketId) {
-        log.info("Cancelando ticket: {}", ticketId);
+    // ================================================================================================
 
+    // ============================================ GET BY ID =========================================
+
+    public ResponseTicketDto getTicketById(String ticketId) {
+        log.debug("Buscando ticket por ID: {}", ticketId);
         var entity = this.findTicketById(ticketId);
-        this.finishAttendanceIfExists(entity);
-
-        entity.setStatus(TicketStatus.CANCELED);
-        this.ticketRepository.save(entity);
-
-        log.info("Ticket cancelado com sucesso: {}", ticketId);
         return this.buildResponseTicketDto(entity);
     }
+
+    // ================================================================================================
+
+    // ============================================ GET ALL ===========================================
+
+    public Page<ResponseAllTicketsDto> getAllTickets(int page, int size) {
+        log.debug("Buscando todos os tickets - página: {}, tamanho: {}", page, size);
+
+        return this.ticketRepository.findAll(PageRequest.of(page, size))
+                .map(this::buildResponseAllTicketsDto);
+    }
+
+    // ================================================================================================
+
+    // ====================================== GET BY ATTENDANT ========================================
+
+    public Page<ResponseTicketsForAttendance> getTicketsByAttendant(
+            JwtAuthenticationToken token,
+            int page,
+            int size
+    ) {
+        var unit = this.unitContext.getCurrentUnit(token);
+        log.debug("Buscando tickets do atendente: {}, unidade: {}", token.getName(), unit.getUnitId());
+
+        return this.ticketRepository
+                .getTicketsByAttendant(unit.getUnitId(), token.getName(), PageRequest.of(page, size))
+                .map(this::buildResponseTicketsForAttendance);
+    }
+
+    // ================================================================================================
+
+    // ====================================== GET HISTORY BY ATTENDANT ================================
+
+    public Page<ResponseTicketsForAttendance> getHistoryTicketsByAttendant(
+            JwtAuthenticationToken token,
+            int page,
+            int size
+    ) {
+        var unit = this.unitContext.getCurrentUnit(token);
+        log.debug("Buscando histórico de tickets do atendente: {}, unidade: {}", token.getName(), unit.getUnitId());
+
+        return this.ticketRepository
+                .getHistoryTicketsByAttendant(unit.getUnitId(), token.getName(), PageRequest.of(page, size))
+                .map(this::buildResponseTicketsForAttendance);
+    }
+
+    // ================================================================================================
+
+    // ============================================ CALL CUSTOMER =====================================
+
+    public ResponseTicketDto callCustomer(String ticketId) {
+        log.info("Chamando cliente do ticket: {}", ticketId);
+
+        var entity = this.findTicketById(ticketId);
+        var response = this.buildResponseTicketDto(entity);
+
+        this.sendCustomerCallNotification(response);
+
+        log.info("Cliente chamado com sucesso para o ticket: {}", ticketId);
+        return response;
+    }
+
+    // ================================================================================================
+
+    // ============================================ RESET CODE ========================================
 
     public void resetCode(String ticketId) {
         log.info("Resetando código do ticket: {}", ticketId);
@@ -214,60 +279,66 @@ public class TicketService {
         log.info("Código resetado com sucesso para o ticket: {}", ticketId);
     }
 
-    // Métodos auxiliares para buscar entidades
+    // ================================================================================================
+
+    // ======================================== AUXILIARES - FIND =====================================
+
     private Schedule findScheduleById(String scheduleId) {
         return this.scheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new ScheduleNotFoundException(scheduleId));
+                .orElseThrow(() -> {
+                    log.warn("Schedule não encontrado com ID: {}", scheduleId);
+                    return new ScheduleNotFoundException(scheduleId);
+                });
     }
 
     private Customer findCustomerById(String customerId) {
         return this.customerRepository.findByCustomerId(customerId)
-                .orElseThrow(() -> new CustomerNotFoundException(customerId));
+                .orElseThrow(() -> {
+                    log.warn("Customer não encontrado com ID: {}", customerId);
+                    return new CustomerNotFoundException(customerId);
+                });
     }
 
     private ServiceManagement findServiceManagementById(String serviceManagementId) {
         return this.serviceManagementRepository.findByServiceManagementId(serviceManagementId)
-                .orElseThrow(() -> new ServiceManagementNotFoundException(serviceManagementId));
+                .orElseThrow(() -> {
+                    log.warn("ServiceManagement não encontrado com ID: {}", serviceManagementId);
+                    return new ServiceManagementNotFoundException(serviceManagementId);
+                });
     }
 
     private Ticket findTicketById(String ticketId) {
         return this.ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new TicketNotFoundException(ticketId));
+                .orElseThrow(() -> {
+                    log.warn("Ticket não encontrado com ID: {}", ticketId);
+                    return new TicketNotFoundException(ticketId);
+                });
     }
 
-    // Metodo para criar a entidade Ticket
-    private Ticket createTicketEntity(
-            br.com.queue.entities.unit.Unit unit,
-            Schedule schedule,
-            Customer customer,
-            ServiceManagement serviceManagement,
-            long callNumber,
-            CreateTicketDto dto
-    ) {
-        var ticket = new Ticket();
-        ticket.setCallNumber(callNumber);
-        ticket.setCode(this.generateCode(serviceManagement.getCode(), callNumber));
-        ticket.setCustomer(customer);
-        ticket.setServiceManagement(serviceManagement);
-        ticket.setPriority(PriorityLevel.valueOf(dto.priority()));
-        ticket.setStatus(TicketStatus.WAITING);
-        ticket.setCreatedAt(LocalDateTime.now());
-        ticket.setSchedule(schedule);
-        ticket.setUnit(unit);
-        return ticket;
+    private Optional<Ticket> findExistingTicketBySchedule(String scheduleId) {
+        return this.ticketRepository.findTicketByScheduleScheduleId(scheduleId);
     }
 
-    // Metodo para gerar código do ticket
-    private String generateCode(String prefix, long callNumber) {
-        if (callNumber < 10) {
-            return String.format("%s-%02d", prefix, callNumber);
-        } else if (callNumber < 100) {
-            return String.format("%s-%03d", prefix, callNumber);
+    // ================================================================================================
+
+    // ======================================== AUXILIARES - ATTENDANCE ===============================
+
+    private void deleteAttendanceIfExists(Ticket ticket) {
+        if (ticket.getAttendance() != null) {
+            log.debug("Deletando atendimento do ticket: {}", ticket.getTicketId());
+            this.attendanceRepository.delete(ticket.getAttendance());
         }
-        return String.format("%s-%03d", prefix, callNumber);
     }
 
-    // Metodo para calcular tempo de atendimento
+    private void finishAttendanceIfExists(Ticket ticket) {
+        var attendance = ticket.getAttendance();
+        if (attendance != null && attendance.getStartedAt() != null) {
+            log.debug("Finalizando atendimento do ticket: {}", ticket.getTicketId());
+            attendance.setFinishedAt(LocalDateTime.now());
+            this.attendanceRepository.save(attendance);
+        }
+    }
+
     private String calculateAttendanceTime(Attendance attendance) {
         if (attendance == null || attendance.getFinishedAt() == null) {
             return ATTENDANCE_TIME_DEFAULT;
@@ -284,22 +355,10 @@ public class TicketService {
         );
     }
 
-    // Métodos para gerenciar atendimento
-    private void deleteAttendanceIfExists(Ticket ticket) {
-        if (ticket.getAttendance() != null) {
-            this.attendanceRepository.delete(ticket.getAttendance());
-        }
-    }
+    // ================================================================================================
 
-    private void finishAttendanceIfExists(Ticket ticket) {
-        var attendance = ticket.getAttendance();
-        if (attendance != null && attendance.getStartedAt() != null) {
-            attendance.setFinishedAt(LocalDateTime.now());
-            this.attendanceRepository.save(attendance);
-        }
-    }
+    // ======================================== AUXILIARES - WEBSOCKET ================================
 
-    // Métodos para enviar notificações WebSocket
     private void sendTicketCreatedNotification(Ticket ticket) {
         var notification = this.buildResponseTicketsForAttendance(ticket);
         this.messagingTemplate.convertAndSend("/topic/tickets", notification);
@@ -316,7 +375,27 @@ public class TicketService {
         log.debug("Notificação de chamada de cliente enviada via WebSocket para o ticket: {}", response.ticketId());
     }
 
-    // Métodos para construir DTOs de resposta
+    // ================================================================================================
+
+    // ======================================== AUXILIARES - UTILS ====================================
+
+    private String generateCode(String prefix, long callNumber) {
+        if (callNumber < 10) {
+            return String.format("%s-%02d", prefix, callNumber);
+        } else if (callNumber < 100) {
+            return String.format("%s-%03d", prefix, callNumber);
+        }
+        return String.format("%s-%03d", prefix, callNumber);
+    }
+
+    private String normalizeSearch(String search) {
+        return (search == null || search.isBlank()) ? null : search.trim();
+    }
+
+    // ================================================================================================
+
+    // ======================================== AUXILIARES - DTO BUILDER ==============================
+
     private ResponseTicketDto buildResponseTicketDto(Ticket entity) {
         var calledAt = entity.getCalledAt() != null
                 ? entity.getCalledAt().format(DATE_TIME_FORMATTER)
@@ -373,4 +452,6 @@ public class TicketService {
                 attendanceTime
         );
     }
+
+    // ================================================================================================
 }

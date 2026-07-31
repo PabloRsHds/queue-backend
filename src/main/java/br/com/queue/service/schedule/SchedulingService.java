@@ -59,10 +59,9 @@ public class SchedulingService {
         var service = this.findServiceManagementById(dto.serviceManagementId());
 
         var entity = this.buildScheduleEntity(unit, customer, service, dto);
-        this.scheduleRepository.save(entity);
 
         log.info("Agendamento criado com sucesso: {}", entity.getScheduleId());
-        return this.buildResponseScheduleDto(entity);
+        return this.buildResponseScheduleDto(this.scheduleRepository.save(entity));
     }
 
     // =========================================== UPDATE ===========================================

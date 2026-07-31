@@ -43,12 +43,10 @@ public class DepartmentService {
         log.info("Criando departamento: {}", dto.name());
 
         var unit = this.unitContext.getCurrentUnit(token);
-
         var entity = this.buildDepartmentEntity(unit, dto);
-        this.departmentRepository.save(entity);
 
         log.info("Departamento criado com sucesso: {}, ID: {}", entity.getName(), entity.getDepartmentId());
-        return this.toResponse(entity);
+        return this.toResponse(this.departmentRepository.save(entity));
     }
 
     private Department buildDepartmentEntity(
@@ -76,11 +74,9 @@ public class DepartmentService {
         log.info("Atualizando departamento: {}", dto.departmentId());
 
         var entity = this.findDepartmentById(dto.departmentId());
-
         this.updateDepartmentFields(entity, dto);
-        this.departmentRepository.save(entity);
 
-        return this.toResponse(entity);
+        return this.toResponse(this.departmentRepository.save(entity));
     }
 
     private void updateDepartmentFields(Department entity, UpdateDepartmentDto dto) {

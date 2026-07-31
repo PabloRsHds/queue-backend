@@ -45,14 +45,11 @@ public class CustomerService {
         log.info("Registrando cliente: {}", dto.name());
 
         var unit = this.unitContext.getCurrentUnit(token);
-
         this.validateCreateCustomer(dto);
-
         var entity = this.buildCustomerEntity(unit, dto);
-        this.customerRepository.save(entity);
 
         log.info("Cliente registrado com sucesso: {}, ID: {}", entity.getName(), entity.getCustomerId());
-        return this.toResponse(entity);
+        return this.toResponse(this.customerRepository.save(entity));
     }
 
     private void validateCreateCustomer(CreateCustomerDto dto) {
@@ -69,7 +66,7 @@ public class CustomerService {
         }
 
         if (verifyRg) {
-            log.warn("Tentativa de criar cliente com RG já existente: {}", dto.rg()); // CORRIGIDO: era dto.email()
+            log.warn("Tentativa de criar cliente com RG já existente: {}", dto.rg());
             throw new CustomerValidationException("Já existe um cliente com este RG.");
         }
 
@@ -79,7 +76,7 @@ public class CustomerService {
         }
 
         if (verifyEmail) {
-            log.warn("Tentativa de criar cliente com e-mail já existente: {}", dto.email()); // CORRIGIDO: era "usuário"
+            log.warn("Tentativa de criar cliente com e-mail já existente: {}", dto.email());
             throw new CustomerValidationException("Já existe um cliente com este e-mail.");
         }
 
@@ -117,17 +114,9 @@ public class CustomerService {
         // Verifica se as novas credenciais já existem em outro cliente
         this.validateUpdateCredentials(dto, entity);
 
-        var hasChanges = this.updateCustomerFields(entity, dto);
+        this.updateCustomerFields(entity, dto);
 
-        if (hasChanges) {
-            entity.setUpdatedAt(LocalDateTime.now());
-            this.customerRepository.save(entity);
-            log.info("Cliente atualizado com sucesso: {}, ID: {}", entity.getName(), entity.getCustomerId());
-        } else {
-            log.debug("Nenhuma alteração detectada para o cliente: {}", dto.customerId());
-        }
-
-        return this.toResponse(entity);
+        return this.toResponse(this.customerRepository.save(entity));
     }
 
     private void validateUpdateCredentials(UpdateCustomerDto dto, Customer entity) {
@@ -183,7 +172,7 @@ public class CustomerService {
         log.debug("Validação de atualização concluída para o cliente: {}", entity.getCustomerId());
     }
 
-    private boolean updateCustomerFields(Customer entity, UpdateCustomerDto dto) {
+    private void updateCustomerFields(Customer entity, UpdateCustomerDto dto) {
         log.debug("Atualizando campos do cliente: {}", entity.getCustomerId());
 
         boolean hasChanges = false;
@@ -214,10 +203,11 @@ public class CustomerService {
         }
 
         if (hasChanges) {
-            log.debug("Campos do cliente {} foram atualizados", entity.getCustomerId());
+            entity.setUpdatedAt(LocalDateTime.now());
+            log.info("Cliente atualizado com sucesso: {}, ID: {}", entity.getName(), entity.getCustomerId());
+        } else {
+            log.debug("Nenhuma alteração detectada para o cliente: {}", dto.customerId());
         }
-
-        return hasChanges;
     }
 
     // ================================================================================================

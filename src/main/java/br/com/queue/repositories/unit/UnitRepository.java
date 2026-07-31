@@ -13,6 +13,8 @@ import java.util.Optional;
 
 public interface UnitRepository extends JpaRepository<Unit, String> {
 
+    boolean existsByName(String name);
+
     @Query(value = """
         SELECT
             u.unit_id AS unitId,

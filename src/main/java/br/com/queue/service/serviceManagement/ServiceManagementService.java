@@ -56,10 +56,8 @@ public class ServiceManagementService {
         var entity = this.toEntity(dto, department);
         entity.setUnit(unit);
 
-        this.serviceRepository.save(entity);
-
         log.info("Serviço criado com sucesso: {}, ID: {}", entity.getName(), entity.getServiceManagementId());
-        return toResponse(entity);
+        return toResponse(this.serviceRepository.save(entity));
     }
 
     private void validateCreate(CreateServiceManagementDto dto) {

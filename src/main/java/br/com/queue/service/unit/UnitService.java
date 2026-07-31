@@ -34,13 +34,10 @@ public class UnitService {
         log.info("Criando unidade: {}", dto.name());
 
         this.validateCreateUnit(dto);
-
         var entity = this.toEntity(dto);
 
-        this.unitRepository.save(entity);
-
         log.info("Unidade criada com sucesso: {}, ID: {}", entity.getName(), entity.getUnitId());
-        return this.toResponse(entity);
+        return this.toResponse(this.unitRepository.save(entity));
     }
 
     private Unit toEntity(CreateUnitDto dto) {
@@ -68,10 +65,8 @@ public class UnitService {
         this.validateUpdateUnit(dto, entity);
         this.updateEntity(dto, entity);
 
-        this.unitRepository.save(entity);
-
         log.info("Unidade atualizada com sucesso: {}, ID: {}", entity.getName(), entity.getUnitId());
-        return this.toResponse(entity);
+        return this.toResponse(this.unitRepository.save(entity));
     }
 
     private void updateEntity(UpdateUnitDto dto, Unit entity) {
@@ -127,9 +122,7 @@ public class UnitService {
     public ResponseUnitDto getUnitById(String unitId) {
         log.debug("Buscando unidade por ID: {}", unitId);
 
-        var entity = this.findUnit(unitId);
-
-        return this.toResponse(entity);
+        return this.toResponse(this.findUnit(unitId));
     }
 
     // ================================================================================================
@@ -163,7 +156,7 @@ public class UnitService {
     private void validateCreateUnit(CreateUnitDto dto) {
         log.debug("Validando dados para criação da unidade: {}", dto.name());
 
-        if (this.unitRepository.findByName(dto.name()).isPresent()) {
+        if (this.unitRepository.existsByName(dto.name())) {
             log.warn("Tentativa de criar unidade com nome já existente: {}", dto.name());
             throw new UnitIsPresentException("Uma unidade com o nome '" + dto.name() + "' já existe.");
         }
@@ -177,7 +170,7 @@ public class UnitService {
         if (dto.name() != null
                 && !dto.name().isBlank()
                 && !dto.name().equals(entity.getName())
-                && this.unitRepository.findByName(dto.name()).isPresent()) {
+                && this.unitRepository.existsByName(dto.name())) {
 
             log.warn("Tentativa de atualizar unidade com nome já existente: {}", dto.name());
             throw new UnitIsPresentException("Uma unidade com o nome '" + dto.name() + "' já existe.");

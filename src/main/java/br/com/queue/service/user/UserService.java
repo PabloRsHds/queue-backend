@@ -52,14 +52,11 @@ public class UserService {
         // Verifico em que unidade o usuario está logado,
         // e passo ao usuario que for criado para o sistema
         var unit = this.unitContext.getCurrentUnit(token);
-
         this.validateCreateUser(dto);
-
         var entity = this.toEntity(dto, unit);
-        this.userRepository.save(entity);
 
         log.info("Usuário criado com sucesso: {}, ID: {}", entity.getUsername(), entity.getUserId());
-        return this.toResponse(entity);
+        return this.toResponse(this.userRepository.save(entity));
     }
 
     public void validateCreateUser(CreateUserDto dto) {
@@ -128,10 +125,8 @@ public class UserService {
         this.validateUpdateUser(dto, entity);
         this.updateEntity(dto, entity);
 
-        this.userRepository.save(entity);
-
         log.info("Usuário atualizado com sucesso: {}, ID: {}", entity.getUsername(), entity.getUserId());
-        return this.toResponse(entity);
+        return this.toResponse(this.userRepository.save(entity));
     }
 
     private void validateUpdateUser(UpdateUserDto dto, User entity) {
@@ -286,8 +281,7 @@ public class UserService {
     public ResponseUserInfoDto getUserById(String userId) {
         log.debug("Buscando usuário por ID: {}", userId);
 
-        var entity = this.findUser(userId);
-        return this.toInfoResponse(entity);
+        return this.toInfoResponse(this.findUser(userId));
     }
     // ==============================================================================================================
 
@@ -295,8 +289,7 @@ public class UserService {
     public ResponseUserInfoDto getUserByToken(JwtAuthenticationToken token) {
         log.debug("Buscando usuário pelo token: {}", token.getName());
 
-        var entity = this.findUser(token.getName());
-        return this.toInfoResponse(entity);
+        return this.toInfoResponse(this.findUser(token.getName()));
     }
     // ==============================================================================================================
 

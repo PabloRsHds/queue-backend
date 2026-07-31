@@ -17,7 +17,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .addEndpoint("/ws")
                 .setAllowedOrigins(
                         "http://localhost:4200",
-                        "http://192.168.1.7:4200"
+                        "http://192.168.25.2:4200"
                 )
                 .withSockJS();
     }
