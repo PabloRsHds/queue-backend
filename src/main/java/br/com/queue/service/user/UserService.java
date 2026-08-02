@@ -77,15 +77,17 @@ public class UserService {
             throw new UserValidationException("Este e-mail já está cadastrado.");
         }
 
-        if (verifyPhone) {
+        if (verifyPhone
+                &&  dto.phone() != null) {
             log.warn("Tentativa de criar usuário com telefone já existente: {}", dto.phone());
             throw new UserValidationException("Este telefone já está cadastrado.");
         }
 
-        if (verifyCounterNumber) {
+        if (verifyCounterNumber && dto.counterNumber() != null) {
             log.warn("Tentativa de criar usuário com guichê já alocado: {}", dto.counterNumber());
             throw new UserValidationException("Já possuí um usuário alocado para este guichê.");
         }
+
 
         log.debug("Validação concluída com sucesso para o usuário: {}", dto.username());
     }

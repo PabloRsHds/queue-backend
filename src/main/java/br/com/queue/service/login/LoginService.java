@@ -56,25 +56,25 @@ public class LoginService {
         var user = this.userRepository.findByEmailOrUsername(emailOrUsername)
                 .orElseThrow(() -> {
                     log.warn("Usuário não encontrado: {}", emailOrUsername);
-                    return new UserNotFoundException("Usuário não encontrado: " + emailOrUsername);
+                    return new UserNotFoundException("Usuário ou senha estão incorretos.");
                 });
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
             log.warn("Senha incorreta para o usuário: {}", emailOrUsername);
-            throw new UserPasswordInvalidException("Senha incorreta para o usuário: " + emailOrUsername);
+            throw new UserPasswordInvalidException("Usuário ou senha estão incorretos.");
         }
 
         if (user.getRole() != Role.ADMIN) {
             var unit = this.unitRepository.findById(unitId)
                     .orElseThrow(() -> {
                         log.warn("Unidade não encontrada: {}", unitId);
-                        return new UnitNotFoundException("Unidade não encontrada com ID: " + unitId);
+                        return new UnitNotFoundException("Unidade não encontrada. ");
                     });
 
             if (!user.getUnit().getUnitId().equals(unit.getUnitId())) {
                 log.warn("Usuário {} não pertence à unidade {}", user.getUserId(), unitId);
                 throw new UserUnitMismatchException(
-                        "Usuário não pertence à unidade: " + unitId
+                        "Usuário não pertence à unidade: " + user.getUnit().getName()
                 );
             }
 
