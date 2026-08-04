@@ -8,6 +8,7 @@ public record ResponseTicketDto(
         String customerName,
         String serviceManagementId,
         String serviceManagementName,
+        String departmentName,
         String priority,
         String status,
         String createdAt,

@@ -408,6 +408,7 @@ public class TicketService {
                 entity.getCustomer().getName(),
                 entity.getServiceManagement().getServiceManagementId(),
                 entity.getServiceManagement().getName(),
+                entity.getServiceManagement().getDepartment().getName(),
                 entity.getPriority().name(),
                 entity.getStatus().name(),
                 entity.getCreatedAt().format(DATE_TIME_FORMATTER),

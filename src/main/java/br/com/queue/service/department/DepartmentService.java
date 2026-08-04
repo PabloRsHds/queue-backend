@@ -2,8 +2,6 @@ package br.com.queue.service.department;
 
 import br.com.queue.dtos.department.ResponseDepartmentDto;
 import br.com.queue.dtos.department.create.CreateDepartmentDto;
-import br.com.queue.dtos.department.getDepartment.ResponseDepartmentNamesDto;
-import br.com.queue.dtos.department.getDepartment.ResponseGetDepartment;
 import br.com.queue.dtos.department.statistics.ResponseDepartmentDashBoardDto;
 import br.com.queue.dtos.department.update.UpdateDepartmentDto;
 import br.com.queue.entities.department.Department;
@@ -22,7 +20,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -127,54 +124,11 @@ public class DepartmentService {
                 unit.getUnitId(),
                 normalizedSearch,
                 PageRequest.of(page, size)
-        );
+        ).map(this::toResponse);
     }
 
     // ================================================================================================
 
-    // ============================================ GET NAMES ========================================
-
-    public List<ResponseDepartmentNamesDto> getDepartmentNames() {
-        log.debug("Buscando nomes de todos os departamentos");
-
-        return this.departmentRepository.findAll()
-                .stream()
-                .map(department -> new ResponseDepartmentNamesDto(department.getName()))
-                .collect(Collectors.toList());
-    }
-
-    // ================================================================================================
-
-    // ============================================ GET BY ID =========================================
-
-    public ResponseGetDepartment getDepartmentById(String departmentId) {
-        log.debug("Buscando departamento por ID: {}", departmentId);
-
-        var department = this.findDepartmentById(departmentId);
-
-        var services = department.getServices()
-                .stream()
-                .map(ServiceManagement::getName)
-                .collect(Collectors.toList());
-
-        var updatedAt = department.getUpdatedAt() != null
-                ? department.getUpdatedAt().format(DATE_TIME_FORMATTER)
-                : null;
-
-        log.debug("Departamento encontrado: {}, com {} serviços", department.getName(), services.size());
-
-        return new ResponseGetDepartment(
-                department.getDepartmentId(),
-                department.getName(),
-                department.getDescription(),
-                department.getActive(),
-                department.getCreatedAt().format(DATE_TIME_FORMATTER),
-                updatedAt,
-                services
-        );
-    }
-
-    // ================================================================================================
 
     // =========================================== DELETE ===========================================
 
@@ -241,11 +195,24 @@ public class DepartmentService {
     }
 
     private ResponseDepartmentDto toResponse(Department entity) {
+
+        var services = entity.getServices()
+                .stream()
+                .map(ServiceManagement::getName)
+                .collect(Collectors.toList());
+
+        var updatedAt = entity.getUpdatedAt() != null
+                ? entity.getUpdatedAt().format(DATE_TIME_FORMATTER)
+                : null;
+
         return new ResponseDepartmentDto(
                 entity.getDepartmentId(),
                 entity.getName(),
                 entity.getDescription(),
-                entity.getActive()
+                entity.getActive(),
+                entity.getCreatedAt().format(DATE_TIME_FORMATTER),
+                updatedAt,
+                services
         );
     }
 }

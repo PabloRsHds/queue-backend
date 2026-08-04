@@ -22,32 +22,46 @@ public interface DepartmentRepository extends JpaRepository<Department, String> 
 
     @Query(value = """
     SELECT
-        d.department_id AS departmentId ,
-        d.name AS name,
-        d.description AS description,
-        d.active AS active
+        d.department_id,
+        d.unit_id,
+        d.name,
+        d.description,
+        d.active,
+        d.created_at,
+        d.updated_at
     FROM tb_departments d
+    LEFT JOIN tb_service_management sm
+        ON sm.department_id = d.department_id
     WHERE d.unit_id = :unitId
-    AND (
-        :search IS NULL
-        OR :search = ''
-        OR UNACCENT(LOWER(d.name)) LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
-    )
+      AND (
+            :search IS NULL
+         OR :search = ''
+         OR UNACCENT(LOWER(d.name))
+            LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
+      )
+    GROUP BY
+        d.department_id,
+        d.name,
+        d.description,
+        d.active,
+        d.created_at,
+        d.updated_at
     ORDER BY COALESCE(d.updated_at, d.created_at) DESC
     """,
             countQuery = """
     SELECT COUNT(*)
     FROM tb_departments d
     WHERE d.unit_id = :unitId
-    AND (
-        :search IS NULL
-        OR :search = ''
-        OR UNACCENT(LOWER(d.name)) LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
-    )
+      AND (
+            :search IS NULL
+         OR :search = ''
+         OR UNACCENT(LOWER(d.name))
+            LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
+      )
     """,
             nativeQuery = true
     )
-    Page<ResponseDepartmentDto> findAllWithSearch(
+    Page<Department> findAllWithSearch(
             @Param("unitId") String unitId,
             @Param("search") String search,
             Pageable pageable
