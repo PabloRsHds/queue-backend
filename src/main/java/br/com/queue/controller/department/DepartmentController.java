@@ -2,8 +2,6 @@ package br.com.queue.controller.department;
 
 import br.com.queue.dtos.department.ResponseDepartmentDto;
 import br.com.queue.dtos.department.create.CreateDepartmentDto;
-import br.com.queue.dtos.department.getDepartment.ResponseDepartmentNamesDto;
-import br.com.queue.dtos.department.getDepartment.ResponseGetDepartment;
 import br.com.queue.dtos.department.statistics.ResponseDepartmentDashBoardDto;
 import br.com.queue.dtos.department.update.UpdateDepartmentDto;
 import br.com.queue.service.department.DepartmentService;
@@ -14,8 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/departments")
@@ -40,6 +36,13 @@ public class DepartmentController {
         return ResponseEntity.ok(response);
     }
 
+    @DeleteMapping("/{departmentId}")
+    public ResponseEntity<ResponseDepartmentDto> deleteDepartment(@PathVariable String departmentId) {
+
+        var response = this.departmentService.deleteDepartment(departmentId);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
+    }
+
     @GetMapping
     public ResponseEntity<Page<ResponseDepartmentDto>> getAllDepartments(
             JwtAuthenticationToken token,
@@ -50,27 +53,6 @@ public class DepartmentController {
 
         var response = this.departmentService.getAllDepartments(token, page, size, search);
         return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/names")
-    public ResponseEntity<List<ResponseDepartmentNamesDto>> getAllDepartmentNames() {
-
-        var response = this.departmentService.getDepartmentNames();
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/{departmentId}")
-    public ResponseEntity<ResponseGetDepartment> getDepartmentById(@PathVariable String departmentId) {
-
-        var response = this.departmentService.getDepartmentById(departmentId);
-        return ResponseEntity.ok(response);
-    }
-
-    @DeleteMapping("/{departmentId}")
-    public ResponseEntity<ResponseDepartmentDto> deleteDepartment(@PathVariable String departmentId) {
-
-        var response = this.departmentService.deleteDepartment(departmentId);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
     }
 
     @GetMapping("/statistics")
