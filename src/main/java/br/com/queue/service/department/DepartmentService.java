@@ -9,8 +9,12 @@ import br.com.queue.dtos.department.update.UpdateDepartmentDto;
 import br.com.queue.entities.department.Department;
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.entities.unit.Unit;
+import br.com.queue.entities.user.User;
 import br.com.queue.infra.department.DepartmentNotFoundException;
+import br.com.queue.infra.user.UserNotFoundException;
 import br.com.queue.repositories.department.DepartmentRepository;
+import br.com.queue.repositories.unit.UnitRepository;
+import br.com.queue.repositories.user.UserRepository;
 import br.com.queue.service.unit.UnitContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +35,8 @@ import java.util.stream.Collectors;
 public class DepartmentService {
 
     private final DepartmentRepository departmentRepository;
+    private final UserRepository userRepository;
+    private final UnitRepository unitRepository;
     private final UnitContext unitContext;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER =
@@ -42,8 +48,9 @@ public class DepartmentService {
     public ResponseDepartmentDto createDepartment(JwtAuthenticationToken token, CreateDepartmentDto dto) {
         log.info("Criando departamento: {}", dto.name());
 
-        var unit = this.unitContext.getCurrentUnit(token);
-        var entity = this.buildDepartmentEntity(unit, dto);
+        var currentToken = this.unitContext.getCurrentToken(token);
+
+        var entity = this.buildDepartmentEntity(currentToken.unit(), currentToken.user(), dto);
 
         log.info("Departamento criado com sucesso: {}, ID: {}", entity.getName(), entity.getDepartmentId());
         return this.toResponse(this.departmentRepository.save(entity));
@@ -51,6 +58,7 @@ public class DepartmentService {
 
     private Department buildDepartmentEntity(
             Unit unit,
+            User user,
             CreateDepartmentDto dto
     ) {
         log.debug("Construindo entidade Department para: {}", dto.name());
@@ -60,7 +68,7 @@ public class DepartmentService {
         entity.setDescription(dto.description());
         entity.setActive(true);
         entity.setUnit(unit);
-        entity.setCreatedAt(LocalDateTime.now());
+        entity.setCreatedBy(user);
 
         return entity;
     }
@@ -117,14 +125,16 @@ public class DepartmentService {
             int size,
             String search
     ) {
-        var unit = this.unitContext.getCurrentUnit(token);
+        var currentToken = this.unitContext.getCurrentToken(token);
         String normalizedSearch = this.normalizeSearch(search);
 
         log.debug("Buscando departamentos - unidade: {}, página: {}, tamanho: {}, busca: {}",
-                unit.getUnitId(), page, size, normalizedSearch);
+                currentToken.unit().getUnitId(), page, size, normalizedSearch);
 
         return this.departmentRepository.findAllWithSearch(
-                unit.getUnitId(),
+                currentToken.unit().getUnitId(),
+                currentToken.role(),
+                currentToken.user().getUserId(),
                 normalizedSearch,
                 PageRequest.of(page, size)
         );
@@ -197,13 +207,17 @@ public class DepartmentService {
     // =========================================== STATISTICS ========================================
 
     public ResponseDepartmentDashBoardDto getStatistics(JwtAuthenticationToken token) {
-        var unit = this.unitContext.getCurrentUnit(token);
-        log.debug("Buscando estatísticas de departamentos para unidade: {}", unit.getUnitId());
+        var currentToken = this.unitContext.getCurrentToken(token);
+        log.debug("Buscando estatísticas de departamentos para unidade: {}", currentToken.unit().getUnitId());
 
-        var totalDepartment = this.departmentRepository.countTotalDepartmentsStatisticsDto(unit.getUnitId());
-        var countServicesByDepartments = this.departmentRepository.countServicesByDepartmentStatisticsDto(unit.getUnitId());
-        var departmentPercentages = this.departmentRepository.getDepartmentPercentagesStatisticsDto(unit.getUnitId());
-        var departmentsCreatedByMonth = this.departmentRepository.countDepartmentsCreatedByMonth(unit.getUnitId());
+        var totalDepartment =
+                this.departmentRepository.countTotalDepartmentsStatisticsDto(currentToken.unit().getUnitId());
+        var countServicesByDepartments =
+                this.departmentRepository.countServicesByDepartmentStatisticsDto(currentToken.unit().getUnitId());
+        var departmentPercentages =
+                this.departmentRepository.getDepartmentPercentagesStatisticsDto(currentToken.unit().getUnitId());
+        var departmentsCreatedByMonth =
+                this.departmentRepository.countDepartmentsCreatedByMonth(currentToken.unit().getUnitId());
 
         log.debug(
                 "Estatísticas coletadas: total={}, " +

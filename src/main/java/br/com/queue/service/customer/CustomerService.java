@@ -44,9 +44,9 @@ public class CustomerService {
     public ResponseCustomerDto registerCustomer(JwtAuthenticationToken token, CreateCustomerDto dto) {
         log.info("Registrando cliente: {}", dto.name());
 
-        var unit = this.unitContext.getCurrentUnit(token);
+        var currentToken = this.unitContext.getCurrentToken(token);
         this.validateCreateCustomer(dto);
-        var entity = this.buildCustomerEntity(unit, dto);
+        var entity = this.buildCustomerEntity(currentToken.unit(), dto);
 
         log.info("Cliente registrado com sucesso: {}, ID: {}", entity.getName(), entity.getCustomerId());
         return this.toResponse(this.customerRepository.save(entity));
@@ -220,14 +220,14 @@ public class CustomerService {
             int size,
             String search
     ) {
-        var unit = this.unitContext.getCurrentUnit(token);
+        var currentToken = this.unitContext.getCurrentToken(token);
         String normalizedSearch = this.normalizeSearch(search);
 
         log.debug("Buscando clientes - unidade: {}, página: {}, tamanho: {}, busca: {}",
-                unit.getUnitId(), page, size, normalizedSearch);
+                currentToken.unit().getUnitId(), page, size, normalizedSearch);
 
         return this.customerRepository.findAllWithSearch(
-                unit.getUnitId(),
+                currentToken.unit().getUnitId(),
                 normalizedSearch,
                 PageRequest.of(page, size)
         );
@@ -308,11 +308,13 @@ public class CustomerService {
     // =========================================== STATISTICS ========================================
 
     public ResponseCustomerDashBoardDto getStatistics(JwtAuthenticationToken token) {
-        var unit = this.unitContext.getCurrentUnit(token);
-        log.debug("Buscando estatísticas de clientes para unidade: {}", unit.getUnitId());
+        var currentToken = this.unitContext.getCurrentToken(token);
+        log.debug("Buscando estatísticas de clientes para unidade: {}", currentToken.unit().getUnitId());
 
-        var countTotalCustomersStatistics = this.customerRepository.countTotalCustomerStatisticsDto(unit.getUnitId());
-        var customersCreatedByMonthStatistics = this.customerRepository.countCustomersCreatedByMonth(unit.getUnitId());
+        var countTotalCustomersStatistics =
+                this.customerRepository.countTotalCustomerStatisticsDto(currentToken.unit().getUnitId());
+        var customersCreatedByMonthStatistics =
+                this.customerRepository.countCustomersCreatedByMonth(currentToken.unit().getUnitId());
 
         log.debug("Estatísticas coletadas: total={}, por mês={}",
                 countTotalCustomersStatistics,

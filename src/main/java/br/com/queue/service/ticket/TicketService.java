@@ -60,7 +60,7 @@ public class TicketService {
         log.info("Criando ticket para scheduleId: {}, customerId: {}, serviceId: {}",
                 dto.scheduleId(), dto.customerId(), dto.serviceManagementId());
 
-        var unit = this.unitContext.getCurrentUnit(token);
+        var currentToken = this.unitContext.getCurrentToken(token);
         var schedule = this.findScheduleById(dto.scheduleId());
         var customer = this.findCustomerById(dto.customerId());
         var serviceManagement = this.findServiceManagementById(dto.serviceManagementId());
@@ -75,7 +75,7 @@ public class TicketService {
         }
 
         // Gera novo número de chamada e cria ticket
-        var ticket = this.createNewTicket(unit, schedule, customer, serviceManagement, dto);
+        var ticket = this.createNewTicket(currentToken.unit(), schedule, customer, serviceManagement, dto);
         this.ticketRepository.save(ticket);
 
         // Envia notificação WebSocket
@@ -224,11 +224,11 @@ public class TicketService {
             int page,
             int size
     ) {
-        var unit = this.unitContext.getCurrentUnit(token);
-        log.debug("Buscando tickets do atendente: {}, unidade: {}", token.getName(), unit.getUnitId());
+        var currentToken = this.unitContext.getCurrentToken(token);
+        log.debug("Buscando tickets do atendente: {}, unidade: {}", token.getName(), currentToken.unit().getUnitId());
 
         return this.ticketRepository
-                .getTicketsByAttendant(unit.getUnitId(), token.getName(), PageRequest.of(page, size))
+                .getTicketsByAttendant(currentToken.unit().getUnitId(), token.getName(), PageRequest.of(page, size))
                 .map(this::buildResponseTicketsForAttendance);
     }
 
@@ -241,11 +241,16 @@ public class TicketService {
             int page,
             int size
     ) {
-        var unit = this.unitContext.getCurrentUnit(token);
-        log.debug("Buscando histórico de tickets do atendente: {}, unidade: {}", token.getName(), unit.getUnitId());
+        var currentToken = this.unitContext.getCurrentToken(token);
+        log.debug("Buscando histórico de tickets do atendente: {}, unidade: {}",
+                token.getName(),
+                currentToken.unit().getUnitId());
 
         return this.ticketRepository
-                .getHistoryTicketsByAttendant(unit.getUnitId(), token.getName(), PageRequest.of(page, size))
+                .getHistoryTicketsByAttendant(
+                        currentToken.unit().getUnitId(),
+                        token.getName(),
+                        PageRequest.of(page, size))
                 .map(this::buildResponseTicketsForAttendance);
     }
 

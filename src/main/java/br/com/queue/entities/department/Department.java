@@ -2,6 +2,7 @@ package br.com.queue.entities.department;
 
 import br.com.queue.entities.serviceManagement.ServiceManagement;
 import br.com.queue.entities.unit.Unit;
+import br.com.queue.entities.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -40,4 +41,8 @@ public class Department {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "unit_id", nullable = false)
     private Unit unit;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by", nullable = false)
+    private User createdBy;
 }

@@ -20,13 +20,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -51,9 +56,9 @@ public class UserService {
 
         // Verifico em que unidade o usuario está logado,
         // e passo ao usuario que for criado para o sistema
-        var unit = this.unitContext.getCurrentUnit(token);
+        var currentToken = this.unitContext.getCurrentToken(token);
         this.validateCreateUser(dto);
-        var entity = this.toEntity(dto, unit);
+        var entity = this.toEntity(dto, currentToken.unit());
 
         log.info("Usuário criado com sucesso: {}, ID: {}", entity.getUsername(), entity.getUserId());
         return this.toResponse(this.userRepository.save(entity));
@@ -263,17 +268,18 @@ public class UserService {
 
     // ============================================== ALL USERS =====================================================
     public Page<ResponseAllUsersDto> getAllUsers(JwtAuthenticationToken token, int page, int size, String search) {
-        var unit = this.unitContext.getCurrentUnit(token);
+
+        var currentToken = this.unitContext.getCurrentToken(token);
 
         String normalizedSearch = (search == null || search.isBlank())
                 ? null
                 : search.trim();
 
         log.debug("Buscando usuários - unidade: {}, página: {}, tamanho: {}, busca: {}",
-                unit.getUnitId(), page, size, normalizedSearch);
+                currentToken.unit().getUnitId(), page, size, normalizedSearch);
 
         return this.userRepository.findAllWithSearch(
-                unit.getUnitId(),
+                currentToken.unit().getUnitId(),
                 normalizedSearch,
                 PageRequest.of(page, size));
     }
@@ -297,14 +303,14 @@ public class UserService {
 
     // ========================================== GET STATISTICS ====================================================
     public ResponseUserDashBoardDto getStatistics(JwtAuthenticationToken token) {
-        var unit = this.unitContext.getCurrentUnit(token);
+        var currentToken = this.unitContext.getCurrentToken(token);
 
-        log.debug("Buscando estatísticas de usuários para unidade: {}", unit.getUnitId());
-        var countTotalUsersStatistics = this.userRepository.countTotalUsersStatisticsDto(unit.getUnitId());
-        var userPercentagesStatistics = this.userRepository.getUserPercentagesStatisticsDto(unit.getUnitId());
-        var usersCreatedByMonthStatistics = this.userRepository.countUsersCreatedByMonth(unit.getUnitId());
-        var countServicesByUsers = this.userRepository.countServicesByUserStatistics(unit.getUnitId());
-        var countRoleByUsers = this.userRepository.countUsersByRoleStatistics(unit.getUnitId());
+        log.debug("Buscando estatísticas de usuários para unidade: {}", currentToken.unit().getUnitId());
+        var countTotalUsersStatistics = this.userRepository.countTotalUsersStatisticsDto(currentToken.unit().getUnitId());
+        var userPercentagesStatistics = this.userRepository.getUserPercentagesStatisticsDto(currentToken.unit().getUnitId());
+        var usersCreatedByMonthStatistics = this.userRepository.countUsersCreatedByMonth(currentToken.unit().getUnitId());
+        var countServicesByUsers = this.userRepository.countServicesByUserStatistics(currentToken.unit().getUnitId());
+        var countRoleByUsers = this.userRepository.countUsersByRoleStatistics(currentToken.unit().getUnitId());
 
         log.debug("Estatísticas coletadas: total={}, percentuais ativos={}, percentuais inativos={}, por mês={}",
                 countTotalUsersStatistics,
@@ -320,6 +326,45 @@ public class UserService {
                 countRoleByUsers
         );
     }
+    // ===============================================================================================================
+
+
+    // ============================================== IMAGE ==========================================================
+
+    @Transactional
+    public void updatePhoto(JwtAuthenticationToken token, MultipartFile photo) throws IOException {
+
+        if (photo == null || photo.isEmpty()) {
+            throw new UserValidationException("Nenhuma imagem foi enviada.");
+        }
+
+        if (!Objects.requireNonNull(photo.getContentType()).startsWith("image/")) {
+            throw new UserValidationException("O arquivo deve ser uma imagem.");
+        }
+
+        if (photo.getSize() > 1024 * 1024) {
+            throw new UserValidationException("A imagem deve ter no máximo 1 MB.");
+        }
+
+        var user = this.findUser(token.getName());
+
+        user.setPhoto(photo.getBytes());
+        user.setUpdatedAt(LocalDateTime.now());
+
+        userRepository.save(user);
+    }
+
+    public byte[] getPhoto(JwtAuthenticationToken token) {
+
+        User user = this.findUser(token.getName());
+
+        if (user.getPhoto() == null) {
+            throw new UserValidationException("Usuário não possui foto.");
+        }
+
+        return user.getPhoto();
+    }
+
     // ===============================================================================================================
 
     // Serviços auxiliares
@@ -363,7 +408,8 @@ public class UserService {
                 entity.getServices()
                         .stream()
                         .map(ServiceManagement::getName)
-                        .collect(Collectors.toSet())
+                        .collect(Collectors.toSet()),
+                entity.getPhoto() != null
         );
     }
 

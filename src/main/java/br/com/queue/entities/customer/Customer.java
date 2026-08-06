@@ -26,15 +26,9 @@ public class Customer {
     @Column(nullable = false)
     private String name;
 
-    @Column(unique = true)
     private String cpf;
-
-    @Column(unique = true)
     private String rg;
-
     private String phone;
-
-    @Column(unique = true)
     private String email;
 
     @Column(name = "created_at")

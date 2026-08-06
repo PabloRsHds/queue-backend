@@ -34,53 +34,67 @@ public interface ServiceManagementRepository extends JpaRepository<ServiceManage
     void deleteUserServicesByServiceId(@Param("id") String id);
 
     @Query(value = """
-        SELECT
-            s.service_management_id AS serviceManagementId,
-            s.name AS name,
-            s.code AS code,
-            s.description AS description,
-            d.department_id AS departmentId,
-            d.name AS departmentName,
-            s.active AS active
-        FROM tb_service_management s
-        INNER JOIN tb_departments d
-            ON d.department_id = s.department_id
-            AND d.unit_id = :unitId
-        WHERE s.unit_id = :unitId
-        AND (
-            :search IS NULL
-            OR :search = ''
-            OR unaccent(LOWER(s.name))
-                LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
-            OR unaccent(LOWER(s.code))
-                LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
-            OR unaccent(LOWER(d.name))
-                LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
-        )
-        ORDER BY COALESCE(s.updated_at, s.created_at) DESC
-        """,
+    SELECT
+        s.service_management_id AS serviceManagementId,
+        s.name AS name,
+        s.code AS code,
+        s.description AS description,
+        d.department_id AS departmentId,
+        d.name AS departmentName,
+        s.active AS active
+    FROM tb_service_management s
+    INNER JOIN tb_departments d
+        ON d.department_id = s.department_id
+        AND d.unit_id = :unitId
+    WHERE s.unit_id = :unitId
+
+    AND (
+        :role = 'ADMIN'
+        OR d.created_by = :userId
+    )
+
+    AND (
+        :search IS NULL
+        OR :search = ''
+        OR unaccent(LOWER(s.name))
+            LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
+        OR unaccent(LOWER(s.code))
+            LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
+        OR unaccent(LOWER(d.name))
+            LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
+    )
+    ORDER BY COALESCE(s.updated_at, s.created_at) DESC
+    """,
             countQuery = """
-        SELECT COUNT(*)
-        FROM tb_service_management s
-        INNER JOIN tb_departments d
-            ON d.department_id = s.department_id
-            AND d.unit_id = :unitId
-        WHERE s.unit_id = :unitId
-        AND (
-            :search IS NULL
-            OR :search = ''
-            OR unaccent(LOWER(s.name))
-                LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
-            OR unaccent(LOWER(s.code))
-                LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
-            OR unaccent(LOWER(d.name))
-                LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
-        )
-        """,
+    SELECT COUNT(*)
+    FROM tb_service_management s
+    INNER JOIN tb_departments d
+        ON d.department_id = s.department_id
+        AND d.unit_id = :unitId
+    WHERE s.unit_id = :unitId
+
+    AND (
+        :role = 'ADMIN'
+        OR d.created_by = :userId
+    )
+
+    AND (
+        :search IS NULL
+        OR :search = ''
+        OR unaccent(LOWER(s.name))
+            LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
+        OR unaccent(LOWER(s.code))
+            LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
+        OR unaccent(LOWER(d.name))
+            LIKE unaccent(LOWER(CONCAT('%', :search, '%')))
+    )
+    """,
             nativeQuery = true
     )
     Page<ResponseServiceManagementDto> findAllWithSearch(
             @Param("unitId") String unitId,
+            @Param("role") String role,
+            @Param("userId") String userId,
             @Param("search") String search,
             Pageable pageable
     );

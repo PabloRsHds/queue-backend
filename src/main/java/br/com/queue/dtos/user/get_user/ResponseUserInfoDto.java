@@ -14,6 +14,7 @@ public record ResponseUserInfoDto(
         Boolean active,
         String createdAt,
         String updatedAt,
-        Set<String> serviceNames
+        Set<String> serviceNames,
+        boolean hasPhoto
 ) {
 }

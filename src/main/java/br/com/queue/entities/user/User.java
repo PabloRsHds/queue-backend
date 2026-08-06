@@ -24,6 +24,10 @@ public class User {
     @Column(name = "user_id")
     private String userId;
 
+    @Basic(fetch = FetchType.LAZY)
+    @Column(columnDefinition = "bytea")
+    private byte[] photo;
+
     @Column(nullable = false, unique = true)
     private String username;
 

@@ -29,6 +29,10 @@ public interface DepartmentRepository extends JpaRepository<Department, String> 
     FROM tb_departments d
     WHERE d.unit_id = :unitId
     AND (
+        :role = 'ADMIN'
+        OR d.created_by = :userId
+    )
+    AND (
         :search IS NULL
         OR :search = ''
         OR UNACCENT(LOWER(d.name)) LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
@@ -40,6 +44,10 @@ public interface DepartmentRepository extends JpaRepository<Department, String> 
     FROM tb_departments d
     WHERE d.unit_id = :unitId
     AND (
+        :role = 'ADMIN'
+        OR d.created_by = :userId
+    )
+    AND (
         :search IS NULL
         OR :search = ''
         OR UNACCENT(LOWER(d.name)) LIKE UNACCENT(LOWER(CONCAT('%', :search, '%')))
@@ -49,6 +57,8 @@ public interface DepartmentRepository extends JpaRepository<Department, String> 
     )
     Page<ResponseDepartmentDto> findAllWithSearch(
             @Param("unitId") String unitId,
+            @Param("role") String role,
+            @Param("userId") String userId,
             @Param("search") String search,
             Pageable pageable
     );

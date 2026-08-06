@@ -51,15 +51,15 @@ public class AttendanceService {
     public ResponseAttendanceDto startAttendance(JwtAuthenticationToken token, StartAttendanceDto dto) {
         log.info("Iniciando atendimento para ticket: {}", dto.ticketId());
 
-        var unit = this.unitContext.getCurrentUnit(token);
-        var ticket = this.findTicketByTicketIdAndUnitId(dto.ticketId(), unit.getUnitId());
+        var currentToken = this.unitContext.getCurrentToken(token);
+        var ticket = this.findTicketByTicketIdAndUnitId(dto.ticketId(), currentToken.unit().getUnitId());
         var user = this.findUserById(token.getName());
 
         this.validateStartAttendance(ticket, user);
 
         ticket.setStatus(TicketStatus.IN_PROGRESS);
 
-        var attendance = this.buildAttendanceEntity(ticket, user, unit);
+        var attendance = this.buildAttendanceEntity(ticket, user, currentToken.unit());
 
         this.ticketRepository.save(ticket);
         this.attendanceRepository.save(attendance);
@@ -167,23 +167,23 @@ public class AttendanceService {
     // =========================================== STATISTICS ========================================
 
     public ResponseAttendanceDashboardDto getAttendanceStatistics(JwtAuthenticationToken token) {
-        var unit = this.unitContext.getCurrentUnit(token);
-        log.debug("Buscando estatísticas de atendimentos para unidade: {}", unit.getUnitId());
+        var currentToken = this.unitContext.getCurrentToken(token);
+        log.debug("Buscando estatísticas de atendimentos para unidade: {}", currentToken.unit().getUnitId());
 
         var response = new ResponseAttendanceDashboardDto(
-                this.attendanceRepository.countTotalAttendances(unit.getUnitId()),
-                this.attendanceRepository.getAverageWaitingTime(unit.getUnitId()),
-                this.attendanceRepository.getAverageServiceTime(unit.getUnitId()),
-                this.attendanceRepository.averageAttendanceByUser(unit.getUnitId()),
-                this.attendanceRepository.countAttendancesCreatedByMonth(unit.getUnitId()),
-                this.attendanceRepository.countAttendancesByWeek(unit.getUnitId()),
-                this.attendanceRepository.countAttendancesByService(unit.getUnitId()),
-                this.attendanceRepository.countAttendancesByHour(unit.getUnitId()),
-                this.attendanceRepository.countAttendancesByDepartment(unit.getUnitId()),
-                this.attendanceRepository.countAttendancesByCustomer(unit.getUnitId())
+                this.attendanceRepository.countTotalAttendances(currentToken.unit().getUnitId()),
+                this.attendanceRepository.getAverageWaitingTime(currentToken.unit().getUnitId()),
+                this.attendanceRepository.getAverageServiceTime(currentToken.unit().getUnitId()),
+                this.attendanceRepository.averageAttendanceByUser(currentToken.unit().getUnitId()),
+                this.attendanceRepository.countAttendancesCreatedByMonth(currentToken.unit().getUnitId()),
+                this.attendanceRepository.countAttendancesByWeek(currentToken.unit().getUnitId()),
+                this.attendanceRepository.countAttendancesByService(currentToken.unit().getUnitId()),
+                this.attendanceRepository.countAttendancesByHour(currentToken.unit().getUnitId()),
+                this.attendanceRepository.countAttendancesByDepartment(currentToken.unit().getUnitId()),
+                this.attendanceRepository.countAttendancesByCustomer(currentToken.unit().getUnitId())
         );
 
-        log.debug("Estatísticas de atendimentos coletadas para unidade: {}", unit.getUnitId());
+        log.debug("Estatísticas de atendimentos coletadas para unidade: {}", currentToken.unit().getUnitId());
         return response;
     }
 

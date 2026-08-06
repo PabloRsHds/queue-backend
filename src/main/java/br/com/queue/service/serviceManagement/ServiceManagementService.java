@@ -47,14 +47,14 @@ public class ServiceManagementService {
     ) {
         log.info("Criando serviço: {}", dto.name());
 
-        var unit = this.unitContext.getCurrentUnit(token);
+        var currentUnit = this.unitContext.getCurrentToken(token);
 
         this.validateCreate(dto);
 
         var department = this.findDepartment(dto.departmentName());
 
         var entity = this.toEntity(dto, department);
-        entity.setUnit(unit);
+        entity.setUnit(currentUnit.unit());
 
         log.info("Serviço criado com sucesso: {}, ID: {}", entity.getName(), entity.getServiceManagementId());
         return toResponse(this.serviceRepository.save(entity));
@@ -194,15 +194,17 @@ public class ServiceManagementService {
             int size,
             String search
     ) {
-        var unit = this.unitContext.getCurrentUnit(token);
+        var currentToken = this.unitContext.getCurrentToken(token);
 
         String normalizedSearch = this.normalizeSearch(search);
 
         log.debug("Buscando serviços - unidade: {}, página: {}, tamanho: {}, busca: {}",
-                unit.getUnitId(), page, size, normalizedSearch);
+                currentToken.unit().getUnitId(), page, size, normalizedSearch);
 
         return this.serviceRepository.findAllWithSearch(
-                unit.getUnitId(),
+                currentToken.unit().getUnitId(),
+                currentToken.role(),
+                currentToken.user().getUserId(),
                 normalizedSearch,
                 PageRequest.of(page, size)
         );
@@ -246,17 +248,17 @@ public class ServiceManagementService {
     public ResponseServiceDashBoardDto getStatistics(
             JwtAuthenticationToken token
     ) {
-        var unit = this.unitContext.getCurrentUnit(token);
-        log.debug("Buscando estatísticas para unidade: {}", unit.getUnitId());
+        var currentToken = this.unitContext.getCurrentToken(token);
+        log.debug("Buscando estatísticas para unidade: {}", currentToken.unit().getUnitId());
 
         return new ResponseServiceDashBoardDto(
-                serviceRepository.countTotalServicesStatisticsDto(unit.getUnitId()),
-                serviceRepository.getServicePercentagesStatisticsDto(unit.getUnitId()),
-                serviceRepository.countServicesCreatedByMonth(unit.getUnitId()),
-                serviceRepository.countServicesByDepartmentStatistics(unit.getUnitId()),
-                serviceRepository.countUsersByServiceStatistics(unit.getUnitId()),
-                serviceRepository.countSchedulesByServiceStatistics(unit.getUnitId()),
-                serviceRepository.countTicketsByServiceStatistics(unit.getUnitId())
+                serviceRepository.countTotalServicesStatisticsDto(currentToken.unit().getUnitId()),
+                serviceRepository.getServicePercentagesStatisticsDto(currentToken.unit().getUnitId()),
+                serviceRepository.countServicesCreatedByMonth(currentToken.unit().getUnitId()),
+                serviceRepository.countServicesByDepartmentStatistics(currentToken.unit().getUnitId()),
+                serviceRepository.countUsersByServiceStatistics(currentToken.unit().getUnitId()),
+                serviceRepository.countSchedulesByServiceStatistics(currentToken.unit().getUnitId()),
+                serviceRepository.countTicketsByServiceStatistics(currentToken.unit().getUnitId())
         );
     }
 

@@ -6,13 +6,18 @@ import br.com.queue.dtos.user.get_user.ResponseUserInfoDto;
 import br.com.queue.dtos.user.metrics.ResponseUserDashBoardDto;
 import br.com.queue.dtos.user.update.UpdateUserDto;
 import br.com.queue.dtos.user.users.ResponseAllUsersDto;
+import br.com.queue.entities.user.User;
 import br.com.queue.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/users")
@@ -38,6 +43,29 @@ public class UserController {
 
         var response = this.userService.updateUser(dto);
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping(
+            value = "/photo",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<Void> updatePhoto(
+            JwtAuthenticationToken token,
+            @RequestParam("photo") MultipartFile photo
+    ) throws IOException {
+
+        userService.updatePhoto(token, photo);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/photo")
+    public ResponseEntity<byte[]> getPhoto(JwtAuthenticationToken token) {
+
+        byte[] photo = userService.getPhoto(token);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(photo);
     }
 
     @GetMapping

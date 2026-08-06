@@ -54,11 +54,11 @@ public class SchedulingService {
         log.info("Criando agendamento para customerId: {}, serviceId: {}, data: {}",
                 dto.customerId(), dto.serviceManagementId(), dto.scheduledDate());
 
-        var unit = this.unitContext.getCurrentUnit(token);
+        var currentToken = this.unitContext.getCurrentToken(token);
         var customer = this.findCustomerById(dto.customerId());
         var service = this.findServiceManagementById(dto.serviceManagementId());
 
-        var entity = this.buildScheduleEntity(unit, customer, service, dto);
+        var entity = this.buildScheduleEntity(currentToken.unit(), customer, service, dto);
 
         log.info("Agendamento criado com sucesso: {}", entity.getScheduleId());
         return this.buildResponseScheduleDto(this.scheduleRepository.save(entity));
@@ -93,14 +93,14 @@ public class SchedulingService {
             String search,
             LocalDate scheduleDate
     ) {
-        var unit = this.unitContext.getCurrentUnit(token);
+        var currentToken = this.unitContext.getCurrentToken(token);
         String normalizedSearch = this.normalizeSearch(search);
 
         log.debug("Buscando agendamentos - unidade: {}, página: {}, tamanho: {}, busca: {}, data: {}",
-                unit.getUnitId(), page, size, normalizedSearch, scheduleDate);
+                currentToken.unit().getUnitId(), page, size, normalizedSearch, scheduleDate);
 
         return this.scheduleRepository.findAllWithSearch(
-                unit.getUnitId(),
+                currentToken.unit().getUnitId(),
                 normalizedSearch,
                 scheduleDate,
                 PageRequest.of(page, size)
@@ -135,19 +135,19 @@ public class SchedulingService {
     // =========================================== STATISTICS ========================================
 
     public ResponseScheduleDashBoardDto getScheduleStatistics(JwtAuthenticationToken token) {
-        var unit = this.unitContext.getCurrentUnit(token);
-        log.debug("Buscando estatísticas de agendamentos para unidade: {}", unit.getUnitId());
+        var currentToken = this.unitContext.getCurrentToken(token);
+        log.debug("Buscando estatísticas de agendamentos para unidade: {}", currentToken.unit().getUnitId());
 
         return new ResponseScheduleDashBoardDto(
-                this.scheduleRepository.countTotalSchedulesStatisticsDto(unit.getUnitId()),
-                this.scheduleRepository.getSchedulePercentagesStatisticsDto(unit.getUnitId()),
-                this.scheduleRepository.countSchedulesCreatedByMonth(unit.getUnitId()),
-                this.scheduleRepository.countSchedulesCreatedByWeek(unit.getUnitId()),
-                this.scheduleRepository.countSchedulesCreatedByDay(unit.getUnitId()),
-                this.scheduleRepository.countSchedulesByDepartment(unit.getUnitId()),
-                this.scheduleRepository.countSchedulesByService(unit.getUnitId()),
-                this.scheduleRepository.countSchedulesByPriority(unit.getUnitId()),
-                this.scheduleRepository.countSchedulesByHour(unit.getUnitId())
+                this.scheduleRepository.countTotalSchedulesStatisticsDto(currentToken.unit().getUnitId()),
+                this.scheduleRepository.getSchedulePercentagesStatisticsDto(currentToken.unit().getUnitId()),
+                this.scheduleRepository.countSchedulesCreatedByMonth(currentToken.unit().getUnitId()),
+                this.scheduleRepository.countSchedulesCreatedByWeek(currentToken.unit().getUnitId()),
+                this.scheduleRepository.countSchedulesCreatedByDay(currentToken.unit().getUnitId()),
+                this.scheduleRepository.countSchedulesByDepartment(currentToken.unit().getUnitId()),
+                this.scheduleRepository.countSchedulesByService(currentToken.unit().getUnitId()),
+                this.scheduleRepository.countSchedulesByPriority(currentToken.unit().getUnitId()),
+                this.scheduleRepository.countSchedulesByHour(currentToken.unit().getUnitId())
         );
     }
 
